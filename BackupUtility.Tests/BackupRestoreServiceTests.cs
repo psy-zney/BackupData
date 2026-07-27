@@ -175,8 +175,8 @@ public sealed class BackupRestoreServiceTests : IDisposable
             {
                 nestedArchive.GetEntry("second.txt")!.Delete();
                 var replacementFile = nestedArchive.CreateEntry("second.txt");
-                await using var replacementStream = replacementFile.Open();
-                await replacementStream.WriteAsync(Encoding.UTF8.GetBytes("tampered"));
+                await using var tamperedFileStream = replacementFile.Open();
+                await tamperedFileStream.WriteAsync(Encoding.UTF8.GetBytes("tampered"));
             }
 
             var replacement = archive.CreateEntry("archives/profile.zip", CompressionLevel.NoCompression);
