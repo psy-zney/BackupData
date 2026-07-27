@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BackupUtility.Models;
@@ -16,8 +15,6 @@ public sealed record ScanProgress(int Percent, string Message);
 
 public static class AppScannerService
 {
-    private static readonly TimeSpan WingetCacheLifetime = TimeSpan.FromHours(12);
-
     public static async Task<List<AppItemModel>> ScanInstalledAppsAsync(
         IProgress<ScanProgress>? progress = null,
         CancellationToken cancellationToken = default)
@@ -47,12 +44,6 @@ public static class AppScannerService
         IProgress<ScanProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        if (TryReadWingetCache(out var cachedApps))
-        {
-            progress?.Report(new ScanProgress(90, $"Using cached winget package list: {cachedApps.Count} packages."));
-            return cachedApps;
-        }
-
         progress?.Report(new ScanProgress(25, "Checking optional winget integration..."));
         if (!await WingetService.IsWingetAvailableAsync(TimeSpan.FromSeconds(5), cancellationToken))
         {
@@ -68,7 +59,6 @@ public static class AppScannerService
                 tempJson,
                 TimeSpan.FromSeconds(35),
                 cancellationToken);
-            if (apps.Count > 0) WriteWingetCache(apps);
             progress?.Report(new ScanProgress(90, $"winget scan finished: {apps.Count} packages found."));
             return apps;
         }
@@ -221,39 +211,6 @@ public static class AppScannerService
         if (source.Equals("Shortcut", StringComparison.OrdinalIgnoreCase)) return 1;
         return 0;
     }
-
-    private static bool TryReadWingetCache(out List<AppItemModel> apps)
-    {
-        apps = [];
-        try
-        {
-            var cachePath = GetWingetCachePath();
-            if (!File.Exists(cachePath) || DateTime.UtcNow - File.GetLastWriteTimeUtc(cachePath) > WingetCacheLifetime) return false;
-
-            apps = JsonSerializer.Deserialize<List<AppItemModel>>(File.ReadAllText(cachePath)) ?? [];
-            return apps.Count > 0;
-        }
-        catch (IOException) { return false; }
-        catch (UnauthorizedAccessException) { return false; }
-        catch (JsonException) { return false; }
-    }
-
-    private static void WriteWingetCache(List<AppItemModel> apps)
-    {
-        try
-        {
-            var cachePath = GetWingetCachePath();
-            Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
-            File.WriteAllText(cachePath, JsonSerializer.Serialize(apps));
-        }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
-    }
-
-    private static string GetWingetCachePath() => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "ZneyBackup",
-        "winget-packages.json");
 
     private static List<AppItemModel> GetShortcutApps(CancellationToken cancellationToken)
     {
