@@ -29,7 +29,7 @@
                   Description="Back up and restore Zney data packages"
                   Target="[#BackupUtilityExe]"
                   WorkingDirectory="INSTALLFOLDER" />
-        <RegistryValue Root="HKCU" Key="Software\ZneyBackup" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+        <RegistryValue Root="HKLM" Key="Software\ZneyBackup" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
       </Component>
     </StandardDirectory>
 
@@ -42,7 +42,7 @@
                     Target="[#BackupUtilityExe]"
                     WorkingDirectory="INSTALLFOLDER" />
           <RemoveFolder Id="RemoveZneyProgramsFolder" On="uninstall" />
-          <RegistryValue Root="HKCU" Key="Software\ZneyBackup" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+          <RegistryValue Root="HKLM" Key="Software\ZneyBackup" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
         </Component>
       </Directory>
     </StandardDirectory>
@@ -54,7 +54,7 @@
           <CreateFolder />
           <RemoveFile Id="RemoveZneyCacheFiles" Name="*" On="uninstall" />
           <RemoveFolder Id="RemoveZneyCacheDirectory" On="uninstall" />
-          <RegistryValue Root="HKCU" Key="Software\ZneyBackup" Name="CacheDirectory" Type="integer" Value="1" KeyPath="yes" />
+          <RegistryValue Root="HKLM" Key="Software\ZneyBackup" Name="CacheDirectory" Type="integer" Value="1" KeyPath="yes" />
         </Component>
       </Directory>
     </StandardDirectory>

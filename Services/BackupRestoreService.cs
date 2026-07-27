@@ -76,18 +76,25 @@ namespace BackupUtility.Services
                                 };
                                 foreach (var filePath in Directory.EnumerateFiles(sourcePath, "*", enumerationOptions))
                                 {
-                                    var relativePath = NormalizeRelativePath(Path.GetRelativePath(sourcePath, filePath));
-                                    dataArchive.CreateEntryFromFile(filePath, relativePath, CompressionLevel.Optimal);
-                                    item.FileHashes[relativePath] = ComputeFileSha256(filePath);
-                                    item.SizeBytes += new FileInfo(filePath).Length;
+                                    try
+                                    {
+                                        var relativePath = NormalizeRelativePath(Path.GetRelativePath(sourcePath, filePath));
+                                        var writeResult = await WriteFileEntryAndHashAsync(dataArchive, filePath, relativePath);
+                                        item.FileHashes[relativePath] = writeResult.Hash;
+                                        item.SizeBytes += writeResult.SizeBytes;
+                                    }
+                                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                                    {
+                                        onProgress?.Invoke($"Skipped {filePath}: {ex.Message}");
+                                    }
                                 }
                             }
                             else
                             {
                                 var relativePath = Path.GetFileName(sourcePath);
-                                dataArchive.CreateEntryFromFile(sourcePath, relativePath, CompressionLevel.Optimal);
-                                item.FileHashes[relativePath] = ComputeFileSha256(sourcePath);
-                                item.SizeBytes = new FileInfo(sourcePath).Length;
+                                var writeResult = await WriteFileEntryAndHashAsync(dataArchive, sourcePath, relativePath);
+                                item.FileHashes[relativePath] = writeResult.Hash;
+                                item.SizeBytes = writeResult.SizeBytes;
                             }
                         }
                         item.FileHash = ComputeAggregateHash(item.FileHashes);
@@ -150,7 +157,14 @@ namespace BackupUtility.Services
                 {
                     if (item.Category.Equals("WindowsSettings", StringComparison.OrdinalIgnoreCase))
                     {
-                        await RestoreWindowsSettingsAsync(package, item, result, onProgress);
+                        try
+                        {
+                            await RestoreWindowsSettingsAsync(package, item, result, onProgress);
+                        }
+                        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or CryptographicException)
+                        {
+                            result.Errors.Add($"Could not restore Windows settings: {ex.Message}");
+                        }
                         continue;
                     }
                     if (!TryGetSafeTargetPath(item.TargetPath, out var targetRoot) || !IsSafeArchiveEntryName(item.ArchiveEntryName))
@@ -194,15 +208,15 @@ namespace BackupUtility.Services
                             result.Errors.Add($"Bỏ qua đường dẫn thoát thư mục đích: {entry.FullName}");
                             continue;
                         }
-                        Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
                         var temporaryPath = destinationPath + ".restore-" + Guid.NewGuid().ToString("N");
                         try
                         {
+                            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
                             await CopyAndVerifyAsync(entry, temporaryPath, expectedHash);
                             File.Move(temporaryPath, destinationPath, overwrite: true);
                             result.RestoredFiles++;
                         }
-                        catch (Exception ex) when (ex is IOException or InvalidDataException or CryptographicException)
+                        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or CryptographicException)
                         {
                             result.Errors.Add($"Không thể khôi phục {entry.FullName}: {ex.Message}");
                             if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
@@ -211,7 +225,7 @@ namespace BackupUtility.Services
                 }
                 onProgress?.Invoke(result.Succeeded ? "Khôi phục dữ liệu thành công." : "Khôi phục hoàn tất nhưng có mục bị bỏ qua; xem nhật ký.");
             }
-            catch (Exception ex) when (ex is IOException or InvalidDataException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
             {
                 result.Errors.Add($"Không thể đọc gói .zney: {ex.Message}");
             }
@@ -265,6 +279,41 @@ namespace BackupUtility.Services
             }
             if (!Convert.ToHexString(hash.GetHashAndReset()).Equals(expectedHash, StringComparison.OrdinalIgnoreCase))
                 throw new CryptographicException("SHA256 không khớp với manifest.");
+        }
+
+        private static async Task<(string Hash, long SizeBytes)> WriteFileEntryAndHashAsync(ZipArchive archive, string sourcePath, string entryPath)
+        {
+            await using var source = new FileStream(
+                sourcePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete,
+                bufferSize: 81920,
+                useAsync: true);
+
+            var entry = archive.CreateEntry(entryPath, CompressionLevel.Optimal);
+            try
+            {
+                await using var destination = entry.Open();
+                using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+                var buffer = new byte[81920];
+                long sizeBytes = 0;
+                int read;
+                while ((read = await source.ReadAsync(buffer)) > 0)
+                {
+                    hash.AppendData(buffer, 0, read);
+                    await destination.WriteAsync(buffer.AsMemory(0, read));
+                    sizeBytes += read;
+                }
+
+                return (Convert.ToHexString(hash.GetHashAndReset()), sizeBytes);
+            }
+            catch
+            {
+                try { entry.Delete(); }
+                catch (InvalidOperationException) { }
+                throw;
+            }
         }
 
         private static async Task WriteJsonEntryAsync<T>(ZipArchive package, string name, T value)

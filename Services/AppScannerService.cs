@@ -199,10 +199,10 @@ public static class AppScannerService
     private static string GetAppIdentity(AppItemModel app)
     {
         if (app.RestoreWorkflow.Equals("Steam", StringComparison.OrdinalIgnoreCase)) return "steam";
-        if (app.Source.Equals("winget", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(app.PackageId))
-            return $"winget:{app.PackageId}";
-        return $"name:{app.Name}";
+        return $"name:{NormalizeAppName(app.Name)}";
     }
+
+    private static string NormalizeAppName(string value) => new(value.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
 
     private static int GetSourcePriority(string source)
     {
@@ -227,27 +227,36 @@ public static class AppScannerService
 
         const int maximumShortcuts = 1500;
         var examined = 0;
-        foreach (var root in roots)
+        var shell = CreateShortcutShell();
+        if (shell is null) return apps;
+        try
         {
-            foreach (var shortcutPath in EnumerateShortcutFiles(root, maximumShortcuts - examined, cancellationToken))
+            foreach (var root in roots)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (examined++ >= maximumShortcuts) return apps;
-
-                var targetPath = TryResolveShortcutTarget(shortcutPath);
-                if (!targetPath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) || !File.Exists(targetPath)) continue;
-
-                apps.Add(new AppItemModel
+                foreach (var shortcutPath in EnumerateShortcutFiles(root, maximumShortcuts - examined, cancellationToken))
                 {
-                    Name = Path.GetFileNameWithoutExtension(shortcutPath),
-                    PackageId = targetPath,
-                    Publisher = Path.GetDirectoryName(targetPath) ?? string.Empty,
-                    Source = "Shortcut",
-                    IsSelected = false,
-                    RestoreWorkflow = "Manual",
-                    RestoreInstructions = "Detected from a Windows shortcut; no unattended installer ID is assumed."
-                });
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (examined++ >= maximumShortcuts) return apps;
+
+                    var targetPath = TryResolveShortcutTarget(shell, shortcutPath);
+                    if (!targetPath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) || !File.Exists(targetPath)) continue;
+
+                    apps.Add(new AppItemModel
+                    {
+                        Name = Path.GetFileNameWithoutExtension(shortcutPath),
+                        PackageId = targetPath,
+                        Publisher = Path.GetDirectoryName(targetPath) ?? string.Empty,
+                        Source = "Shortcut",
+                        IsSelected = false,
+                        RestoreWorkflow = "Manual",
+                        RestoreInstructions = "Detected from a Windows shortcut; no unattended installer ID is assumed."
+                    });
+                }
             }
+        }
+        finally
+        {
+            ReleaseComObject(shell);
         }
 
         return apps;
@@ -270,17 +279,25 @@ public static class AppScannerService
         return shortcuts;
     }
 
-    private static string TryResolveShortcutTarget(string shortcutPath)
+    private static object? CreateShortcutShell()
     {
-        object? shell = null;
-        object? shortcut = null;
         try
         {
             var shellType = Type.GetTypeFromProgID("WScript.Shell");
-            if (shellType is null) return string.Empty;
+            return shellType is null ? null : Activator.CreateInstance(shellType);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
 
-            shell = Activator.CreateInstance(shellType);
-            shortcut = shellType.InvokeMember(
+    private static string TryResolveShortcutTarget(object shell, string shortcutPath)
+    {
+        object? shortcut = null;
+        try
+        {
+            shortcut = shell.GetType().InvokeMember(
                 "CreateShortcut",
                 BindingFlags.InvokeMethod,
                 binder: null,
@@ -293,12 +310,10 @@ public static class AppScannerService
                 target: shortcut,
                 args: null)?.ToString() ?? string.Empty;
         }
-        catch (COMException) { return string.Empty; }
-        catch (TargetInvocationException) { return string.Empty; }
+        catch (Exception) { return string.Empty; }
         finally
         {
             ReleaseComObject(shortcut);
-            ReleaseComObject(shell);
         }
     }
 
