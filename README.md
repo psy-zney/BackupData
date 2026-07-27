@@ -23,8 +23,8 @@ The export scan is intentionally bounded and does not enumerate the entire disk:
 
 - Desktop and Start Menu shortcuts are read first.
 - Installed apps are then read from the current-user Registry, 32-bit (x86) uninstall view, and 64-bit uninstall view.
-- `winget` is optional, runs in the background, and is stopped after 35 seconds if it does not finish.
-- Folder-size calculation uses two background workers, skips inaccessible paths and reparse points, and reports progress in the app.
+- `winget` is optional, runs in the background, is stopped after 35 seconds if it does not finish, and is cached for 12 hours after a successful scan.
+- Data locations are listed from metadata immediately. Their files are traversed once, as a stream, only when the user creates the backup; inaccessible paths and reparse points are skipped.
 
 ## Language
 

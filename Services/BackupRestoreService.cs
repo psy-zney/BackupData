@@ -68,17 +68,19 @@ namespace BackupUtility.Services
                         {
                             if (Directory.Exists(sourcePath))
                             {
-                                var files = new DirectoryInfo(sourcePath).EnumerateFiles("*", SearchOption.AllDirectories)
-                                    .Where(file => (file.Attributes & FileAttributes.ReparsePoint) == 0)
-                                    .OrderBy(file => Path.GetRelativePath(sourcePath, file.FullName), StringComparer.OrdinalIgnoreCase)
-                                    .ToList();
-                                foreach (var file in files)
+                                var enumerationOptions = new EnumerationOptions
                                 {
-                                    var relativePath = NormalizeRelativePath(Path.GetRelativePath(sourcePath, file.FullName));
-                                    dataArchive.CreateEntryFromFile(file.FullName, relativePath, CompressionLevel.Optimal);
-                                    item.FileHashes[relativePath] = ComputeFileSha256(file.FullName);
+                                    RecurseSubdirectories = true,
+                                    IgnoreInaccessible = true,
+                                    AttributesToSkip = FileAttributes.ReparsePoint
+                                };
+                                foreach (var filePath in Directory.EnumerateFiles(sourcePath, "*", enumerationOptions))
+                                {
+                                    var relativePath = NormalizeRelativePath(Path.GetRelativePath(sourcePath, filePath));
+                                    dataArchive.CreateEntryFromFile(filePath, relativePath, CompressionLevel.Optimal);
+                                    item.FileHashes[relativePath] = ComputeFileSha256(filePath);
+                                    item.SizeBytes += new FileInfo(filePath).Length;
                                 }
-                                item.SizeBytes = files.Sum(file => file.Length);
                             }
                             else
                             {

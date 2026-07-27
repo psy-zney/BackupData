@@ -108,11 +108,9 @@ namespace BackupUtility.Views
                 var registryAppsTask = AppScannerService.ScanRegistryInstalledAppsAsync(cancellation.Token);
                 var dataFoldersTask = AppScannerService.GetSuggestedDataFoldersAsync(progress, cancellation.Token);
                 var wingetAppsTask = AppScannerService.ScanWingetPackagesAsync(progress, cancellation.Token);
-                await Task.WhenAll(registryAppsTask, dataFoldersTask, wingetAppsTask);
+                await Task.WhenAll(registryAppsTask, dataFoldersTask);
 
-                var scannedApps = AppScannerService.PrepareApps(shortcutApps
-                    .Concat(await registryAppsTask)
-                    .Concat(await wingetAppsTask));
+                var scannedApps = AppScannerService.PrepareApps(shortcutApps.Concat(await registryAppsTask));
                 BackupApps.Clear();
                 foreach (var app in scannedApps)
                 {
@@ -123,6 +121,18 @@ namespace BackupUtility.Views
                 foreach (var folder in await dataFoldersTask)
                 {
                     BackupDataFolders.Add(folder);
+                }
+                Log($"Base scan is ready: {scannedApps.Count} applications and {BackupDataFolders.Count} data groups. winget will be added if available.");
+
+                var wingetApps = await wingetAppsTask;
+                if (wingetApps.Count > 0)
+                {
+                    scannedApps = AppScannerService.PrepareApps(scannedApps.Concat(wingetApps));
+                    BackupApps.Clear();
+                    foreach (var app in scannedApps)
+                    {
+                        BackupApps.Add(app);
+                    }
                 }
 
                 ScanProgressBar.Value = 100;

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BackupUtility.Models;
@@ -15,6 +16,8 @@ public sealed record ScanProgress(int Percent, string Message);
 
 public static class AppScannerService
 {
+    private static readonly TimeSpan WingetCacheLifetime = TimeSpan.FromHours(12);
+
     public static async Task<List<AppItemModel>> ScanInstalledAppsAsync(
         IProgress<ScanProgress>? progress = null,
         CancellationToken cancellationToken = default)
@@ -44,6 +47,12 @@ public static class AppScannerService
         IProgress<ScanProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        if (TryReadWingetCache(out var cachedApps))
+        {
+            progress?.Report(new ScanProgress(90, $"Using cached winget package list: {cachedApps.Count} packages."));
+            return cachedApps;
+        }
+
         progress?.Report(new ScanProgress(25, "Checking optional winget integration..."));
         if (!await WingetService.IsWingetAvailableAsync(TimeSpan.FromSeconds(5), cancellationToken))
         {
@@ -59,6 +68,7 @@ public static class AppScannerService
                 tempJson,
                 TimeSpan.FromSeconds(35),
                 cancellationToken);
+            if (apps.Count > 0) WriteWingetCache(apps);
             progress?.Report(new ScanProgress(90, $"winget scan finished: {apps.Count} packages found."));
             return apps;
         }
@@ -94,7 +104,7 @@ public static class AppScannerService
             .ToList();
     }
 
-    public static async Task<List<DataFolderItemModel>> GetSuggestedDataFoldersAsync(
+    public static Task<List<DataFolderItemModel>> GetSuggestedDataFoldersAsync(
         IProgress<ScanProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
@@ -127,24 +137,8 @@ public static class AppScannerService
             })
             .ToList();
 
-        var measuredFolders = folders.Where(item => Directory.Exists(item.SourcePath) || File.Exists(item.SourcePath)).ToList();
-        var completed = 0;
-        progress?.Report(new ScanProgress(20, $"Calculating sizes for {measuredFolders.Count} data locations..."));
-
-        await Parallel.ForEachAsync(
-            measuredFolders,
-            new ParallelOptions { CancellationToken = cancellationToken, MaxDegreeOfParallelism = 2 },
-            (item, token) =>
-            {
-                item.SizeBytes = Directory.Exists(item.SourcePath)
-                    ? GetDirectorySize(item.SourcePath, token)
-                    : GetFileSize(item.SourcePath);
-
-                var done = Interlocked.Increment(ref completed);
-                var percent = 20 + (int)Math.Round(done * 50.0 / Math.Max(1, measuredFolders.Count));
-                progress?.Report(new ScanProgress(percent, $"Scanned {done}/{measuredFolders.Count}: {item.Name}"));
-                return ValueTask.CompletedTask;
-            });
+        cancellationToken.ThrowIfCancellationRequested();
+        progress?.Report(new ScanProgress(60, $"Found {folders.Count} data locations. File sizes are calculated only during backup."));
 
         folders.Add(new DataFolderItemModel
         {
@@ -155,7 +149,7 @@ public static class AppScannerService
             IsSelected = true
         });
 
-        return folders;
+        return Task.FromResult(folders);
     }
 
     private static List<AppItemModel> GetRegistryInstalledApps(CancellationToken cancellationToken)
@@ -227,6 +221,39 @@ public static class AppScannerService
         if (source.Equals("Shortcut", StringComparison.OrdinalIgnoreCase)) return 1;
         return 0;
     }
+
+    private static bool TryReadWingetCache(out List<AppItemModel> apps)
+    {
+        apps = [];
+        try
+        {
+            var cachePath = GetWingetCachePath();
+            if (!File.Exists(cachePath) || DateTime.UtcNow - File.GetLastWriteTimeUtc(cachePath) > WingetCacheLifetime) return false;
+
+            apps = JsonSerializer.Deserialize<List<AppItemModel>>(File.ReadAllText(cachePath)) ?? [];
+            return apps.Count > 0;
+        }
+        catch (IOException) { return false; }
+        catch (UnauthorizedAccessException) { return false; }
+        catch (JsonException) { return false; }
+    }
+
+    private static void WriteWingetCache(List<AppItemModel> apps)
+    {
+        try
+        {
+            var cachePath = GetWingetCachePath();
+            Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
+            File.WriteAllText(cachePath, JsonSerializer.Serialize(apps));
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    private static string GetWingetCachePath() => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "ZneyBackup",
+        "winget-packages.json");
 
     private static List<AppItemModel> GetShortcutApps(CancellationToken cancellationToken)
     {
@@ -351,42 +378,4 @@ public static class AppScannerService
         }
     }
 
-    private static long GetFileSize(string path)
-    {
-        try { return new FileInfo(path).Length; }
-        catch (IOException) { return 0; }
-        catch (UnauthorizedAccessException) { return 0; }
-    }
-
-    private static long GetDirectorySize(string rootPath, CancellationToken cancellationToken)
-    {
-        long total = 0;
-        var pending = new Stack<string>();
-        pending.Push(rootPath);
-
-        while (pending.Count > 0)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var current = pending.Pop();
-            try
-            {
-                if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0) continue;
-
-                foreach (var file in Directory.EnumerateFiles(current))
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    total += GetFileSize(file);
-                }
-
-                foreach (var directory in Directory.EnumerateDirectories(current))
-                {
-                    pending.Push(directory);
-                }
-            }
-            catch (IOException) { }
-            catch (UnauthorizedAccessException) { }
-        }
-
-        return total;
-    }
 }
