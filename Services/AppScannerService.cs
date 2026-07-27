@@ -73,7 +73,7 @@ public static class AppScannerService
             {
                 if (File.Exists(tempJson)) File.Delete(tempJson);
             }
-            catch (IOException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 // The temporary export is non-essential and may still be held by winget.
             }
@@ -147,7 +147,8 @@ public static class AppScannerService
         var apps = new List<AppItemModel>();
         var locations = new[]
         {
-            (RegistryHive.CurrentUser, RegistryView.Default),
+            (RegistryHive.CurrentUser, RegistryView.Registry32),
+            (RegistryHive.CurrentUser, RegistryView.Registry64),
             // x86 applications are common on 64-bit Windows, so read this view before x64.
             (RegistryHive.LocalMachine, RegistryView.Registry32),
             (RegistryHive.LocalMachine, RegistryView.Registry64),
@@ -267,7 +268,13 @@ public static class AppScannerService
         var shortcuts = new List<string>();
         try
         {
-            foreach (var shortcut in Directory.EnumerateFiles(root, "*.lnk", SearchOption.AllDirectories))
+            var options = new EnumerationOptions
+            {
+                RecurseSubdirectories = true,
+                IgnoreInaccessible = true,
+                AttributesToSkip = FileAttributes.ReparsePoint
+            };
+            foreach (var shortcut in Directory.EnumerateFiles(root, "*.lnk", options))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (shortcuts.Count >= maximumFiles) break;
@@ -327,7 +334,8 @@ public static class AppScannerService
         foreach (var app in apps)
         {
             if (app.PackageId.Equals("Valve.Steam", StringComparison.OrdinalIgnoreCase) ||
-                app.Name.Contains("Steam", StringComparison.OrdinalIgnoreCase))
+                app.Name.Equals("Steam", StringComparison.OrdinalIgnoreCase) ||
+                app.Name.Equals("Steam Client", StringComparison.OrdinalIgnoreCase))
             {
                 app.Name = "Steam";
                 app.PackageId = "Valve.Steam";

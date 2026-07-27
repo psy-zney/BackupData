@@ -114,14 +114,14 @@ namespace BackupUtility.Services
 
         public static async Task<bool> InstallWingetPackageAsync(string packageId, Action<string>? onLog = null)
         {
-            if (string.IsNullOrWhiteSpace(packageId) || packageId.IndexOfAny(['\r', '\n', '"']) >= 0)
+            if (!IsValidPackageId(packageId))
             {
-                onLog?.Invoke("Gói winget không hợp lệ; đã bỏ qua.");
+                onLog?.Invoke("Invalid winget package ID; skipped.");
                 return false;
             }
             try
             {
-                onLog?.Invoke($"Đang cài đặt {packageId} qua winget...");
+                onLog?.Invoke($"Installing {packageId} through winget...");
                 var psi = new ProcessStartInfo
                 {
                     FileName = "winget",
@@ -145,7 +145,7 @@ namespace BackupUtility.Services
             }
             catch (Exception ex)
             {
-                onLog?.Invoke($"Lỗi khi cài {packageId}: {ex.Message}");
+                onLog?.Invoke($"Could not install {packageId}: {ex.Message}");
                 return false;
             }
         }
@@ -192,6 +192,17 @@ namespace BackupUtility.Services
             }
             catch (InvalidOperationException) { }
             catch (System.ComponentModel.Win32Exception) { }
+        }
+
+        private static bool IsValidPackageId(string? packageId)
+        {
+            if (string.IsNullOrWhiteSpace(packageId) || packageId.Length > 256) return false;
+            foreach (var character in packageId)
+            {
+                if (!char.IsLetterOrDigit(character) && character is not '.' and not '-' and not '_')
+                    return false;
+            }
+            return true;
         }
     }
 }
