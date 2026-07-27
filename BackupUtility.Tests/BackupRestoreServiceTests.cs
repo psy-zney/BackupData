@@ -142,6 +142,88 @@ public sealed class BackupRestoreServiceTests : IDisposable
         Assert.Contains(result.Errors, error => error.Contains("Missing declared file", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task VerifiesTheWholeGroupBeforeOverwritingAnyFile()
+    {
+        var directory = Path.Combine(_root, "profile");
+        Directory.CreateDirectory(directory);
+        var firstPath = Path.Combine(directory, "first.txt");
+        var secondPath = Path.Combine(directory, "second.txt");
+        await File.WriteAllTextAsync(firstPath, "backup-first");
+        await File.WriteAllTextAsync(secondPath, "backup-second");
+
+        var item = new DataFolderItemModel
+        {
+            Name = "profile",
+            RelativeArchivePath = "profile",
+            TargetPath = $"%LOCALAPPDATA%\\BackupUtility-Tests\\{Path.GetFileName(_root)}\\profile"
+        };
+        var package = Path.Combine(_root, "group-validation.zney");
+        Assert.True(await BackupRestoreService.CreateBackupPackageAsync(package, [], [item]));
+        var manifest = (await BackupRestoreService.ReadManifestFromPackageAsync(package))!;
+
+        using (var archive = ZipFile.Open(package, ZipArchiveMode.Update))
+        {
+            var nestedEntry = archive.GetEntry("archives/profile.zip")!;
+            using var innerBytes = new MemoryStream();
+            await using (var source = nestedEntry.Open())
+                await source.CopyToAsync(innerBytes);
+            nestedEntry.Delete();
+
+            innerBytes.Position = 0;
+            using (var nestedArchive = new ZipArchive(innerBytes, ZipArchiveMode.Update, leaveOpen: true))
+            {
+                nestedArchive.GetEntry("second.txt")!.Delete();
+                var replacementFile = nestedArchive.CreateEntry("second.txt");
+                await using var replacementStream = replacementFile.Open();
+                await replacementStream.WriteAsync(Encoding.UTF8.GetBytes("tampered"));
+            }
+
+            var replacement = archive.CreateEntry("archives/profile.zip", CompressionLevel.NoCompression);
+            await using var replacementStream = replacement.Open();
+            innerBytes.Position = 0;
+            await innerBytes.CopyToAsync(replacementStream);
+        }
+
+        await File.WriteAllTextAsync(firstPath, "current-first");
+        await File.WriteAllTextAsync(secondPath, "current-second");
+        var result = await BackupRestoreService.RestoreSelectedDataAsync(package, manifest.DataFolders);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("current-first", await File.ReadAllTextAsync(firstPath));
+        Assert.Equal("current-second", await File.ReadAllTextAsync(secondPath));
+    }
+
+    [Fact]
+    public async Task RejectsManifestWithNullRequiredFields()
+    {
+        Directory.CreateDirectory(_root);
+        var package = Path.Combine(_root, "null-manifest.zney");
+        var manifest = new BackupManifest
+        {
+            DataFolders =
+            [
+                new DataFolderItemModel
+                {
+                    Name = "invalid",
+                    Category = null!,
+                    RelativeArchivePath = "invalid",
+                    ArchiveEntryName = "archives/invalid.zip",
+                    TargetPath = "%LOCALAPPDATA%\\BackupUtility-Tests\\invalid"
+                }
+            ]
+        };
+
+        using (var archive = ZipFile.Open(package, ZipArchiveMode.Create))
+        {
+            var entry = archive.CreateEntry("manifest.json");
+            await using var stream = entry.Open();
+            await JsonSerializer.SerializeAsync(stream, manifest);
+        }
+
+        Assert.Null(await BackupRestoreService.ReadManifestFromPackageAsync(package));
+    }
+
     private async Task<DataFolderItemModel> CreateDataItemAsync(string archivePath, string fileName, string contents)
     {
         var directory = Path.Combine(_root, archivePath);
