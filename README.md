@@ -83,21 +83,37 @@ archives/
 
 Zney chặn Zip Slip, giới hạn dung lượng giải nén và chỉ phục hồi về vùng dữ liệu người dùng cho phép. Chỉ mở file `.zney` mà bạn tin cậy.
 
-## CI/CD workflow
+## Workflow hoạt động trong app
 
 ```mermaid
-flowchart LR
-    A[Push master hoặc tag v*] --> B[GitHub Actions Windows runner]
-    B --> C[Restore .NET 8]
-    C --> D[Chạy automated tests]
-    D --> E[Publish self-contained win-x64]
-    E --> F[WiX tạo ZneyBackup.msi]
-    F --> G[Upload MSI artifact]
-    G --> H{Tag v*?}
-    H -->|Có| I[Tạo GitHub Release và đính kèm MSI]
+flowchart TD
+    Start[Mở Zney Backup & Restore] --> Mode{Export hay Import?}
+
+    Mode -->|Export| ScanApps[Quét app: Winget / Steam / Manual]
+    ScanApps --> ScanData[Quét App Settings, Windows Settings, Photos, Documents, Videos]
+    ScanData --> ExportList[Hiện checklist theo nhóm]
+    ExportList --> ExportChoice[Người dùng tick dữ liệu cần sao lưu]
+    ExportChoice --> CreatePackage[Tạo manifest JSON, metadata JSON và archive ZIP riêng theo nhóm]
+    CreatePackage --> Hash[Niêm phong SHA-256 từng tệp]
+    Hash --> Save[Chọn vị trí và lưu file .zney]
+    Save --> ExportDone[Hoàn tất Export]
+
+    Mode -->|Import| PickFile[Chọn file .zney]
+    PickFile --> Validate[Kiểm tra đuôi file, manifest và đường dẫn an toàn]
+    Validate --> ImportList[Hiện checklist app, cài đặt và dữ liệu]
+    ImportList --> ImportChoice[Người dùng tick mục cần phục hồi]
+    ImportChoice --> AppFlow{Luồng ứng dụng}
+    AppFlow -->|Winget| Install[Cài app qua winget]
+    AppFlow -->|Steam| Steam[Chỉ cài Steam, yêu cầu người dùng đăng nhập]
+    AppFlow -->|Manual| Skip[Bỏ qua, không chạy installer không xác minh]
+    Install --> RestoreData[Kiểm SHA-256 và phục hồi dữ liệu đã chọn]
+    Steam --> RestoreData
+    Skip --> RestoreData
+    RestoreData --> ApplyWindows[Áp lại Windows Settings trong allow-list]
+    ApplyWindows --> ImportDone[Hoàn tất Import và ghi nhật ký]
 ```
 
-Workflow nằm ở [`.github/workflows/build-msi.yml`](.github/workflows/build-msi.yml). Mỗi push vào `master` đều build/test MSI; push tag dạng `v*` sẽ tạo release tự động.
+Các điểm kiểm soát của người dùng nằm ở hai checklist: trước khi tạo `.zney` và trước khi phục hồi. Zney không tự tải game Steam, không tự chạy script, không tự chọn ảnh/tài liệu/video dung lượng lớn.
 
 ## Kiểm thử
 
