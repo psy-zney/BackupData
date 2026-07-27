@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -35,7 +36,15 @@ namespace BackupUtility.Views
             LvRestoreData.ItemsSource = RestoreDataFolders;
             Closed += (_, _) => _scanCancellation?.Cancel();
 
-            Log("Chọn Export hoặc Import để bắt đầu.");
+            Log(T("InitialPrompt"));
+        }
+
+        private static string T(string key, params object[] arguments)
+        {
+            var template = Application.Current.TryFindResource(key)?.ToString() ?? key;
+            return arguments.Length == 0
+                ? template
+                : string.Format(CultureInfo.CurrentCulture, template, arguments);
         }
 
         private void Log(string message)
@@ -58,20 +67,11 @@ namespace BackupUtility.Views
             }
         }
 
-        private void LoadDefaultDataFolders()
-        {
-            var suggested = AppScannerService.GetSuggestedDataFoldersAsync().GetAwaiter().GetResult();
-            BackupDataFolders.Clear();
-            foreach (var item in suggested)
-            {
-                BackupDataFolders.Add(item);
-            }
-        }
-
         private void SetScanningState(bool isScanning, string status = "")
         {
             BtnScanItems.IsEnabled = !isScanning;
             BtnChooseExport.IsEnabled = !isScanning;
+            BtnCreateBackup.IsEnabled = !isScanning && !_isBackupRunning;
             ScanProgressPanel.Visibility = isScanning ? Visibility.Visible : Visibility.Collapsed;
             if (isScanning)
             {
@@ -97,7 +97,7 @@ namespace BackupUtility.Views
 
             try
             {
-                Log("Scanning shortcuts, installed applications and selected data folders...");
+                Log(T("ScanStarting"));
                 var shortcutApps = await AppScannerService.ScanShortcutAppsAsync(cancellation.Token);
 
                 BackupApps.Clear();
@@ -105,7 +105,7 @@ namespace BackupUtility.Views
                 {
                     BackupApps.Add(app);
                 }
-                Log($"Shortcut scan is ready: {shortcutApps.Count} applications found. Scanning user, x86 and x64 Registry entries in the background...");
+                Log(T("ShortcutScanReady", shortcutApps.Count));
 
                 var registryAppsTask = AppScannerService.ScanRegistryInstalledAppsAsync(cancellation.Token);
                 var dataFoldersTask = AppScannerService.GetSuggestedDataFoldersAsync(progress, cancellation.Token);
@@ -124,7 +124,7 @@ namespace BackupUtility.Views
                 {
                     BackupDataFolders.Add(folder);
                 }
-                Log($"Base scan is ready: {scannedApps.Count} applications and {BackupDataFolders.Count} data groups. winget will be added if available.");
+                Log(T("BaseScanReady", scannedApps.Count, BackupDataFolders.Count));
 
                 var wingetApps = await wingetAppsTask;
                 if (wingetApps.Count > 0)
@@ -138,36 +138,23 @@ namespace BackupUtility.Views
                 }
 
                 ScanProgressBar.Value = 100;
-                TxtScanStatus.Text = "Scan complete (100%)";
-                Log($"Found {scannedApps.Count} applications and {BackupDataFolders.Count} data groups. Select the items to export.");
+                TxtScanStatus.Text = T("ScanCompleteStatus");
+                Log(T("ScanFound", scannedApps.Count, BackupDataFolders.Count));
             }
             catch (OperationCanceledException)
             {
-                Log("Scan cancelled.");
+                Log(T("ScanCancelled"));
             }
             catch (Exception ex)
             {
-                Log($"Scan failed safely: {ex.Message}");
-                MessageBox.Show("The scan could not complete. Registry results, if available, were kept.", "Scan warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Log(T("ScanFailed", ex.Message));
+                MessageBox.Show(T("ScanWarningMessage"), T("ScanWarningTitle"), MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             finally
             {
                 _scanCancellation = null;
                 SetScanningState(false);
             }
-        }
-
-        private async Task ScanExportItemsLegacyAsync()
-        {
-            Log("Đang quét ứng dụng và các thư mục dữ liệu quan trọng...");
-            BackupApps.Clear();
-            LoadDefaultDataFolders();
-            var scanned = await AppScannerService.ScanInstalledAppsAsync();
-            foreach (var app in scanned)
-            {
-                BackupApps.Add(app);
-            }
-            Log($"Tìm thấy {scanned.Count} ứng dụng và {BackupDataFolders.Count} nhóm dữ liệu. Hãy tick mục muốn export.");
         }
 
         private async void BtnChooseExport_Click(object sender, RoutedEventArgs e)
@@ -183,7 +170,7 @@ namespace BackupUtility.Views
             ModeSelector.Visibility = Visibility.Collapsed;
             MainTabs.Visibility = Visibility.Visible;
             MainTabs.SelectedIndex = 1;
-            Log("Chọn file .zney để bắt đầu import.");
+            Log(T("SelectImportPrompt"));
         }
 
         private async void BtnScanApps_Click(object sender, RoutedEventArgs e)
@@ -199,7 +186,7 @@ namespace BackupUtility.Views
 
             if (selectedApps.Count == 0 && selectedFolders.Count == 0)
             {
-                MessageBox.Show("Vui lòng chọn ít nhất 1 ứng dụng hoặc 1 thư mục data để sao lưu!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(T("SelectBackupItemsWarning"), T("NoticeTitle"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -216,24 +203,30 @@ namespace BackupUtility.Views
             {
                 _isBackupRunning = true;
                 BtnCreateBackup.IsEnabled = false;
+                MainTabs.IsEnabled = false;
                 try
                 {
-                Log($"Bắt đầu xuất backup ra file: {dialog.FileName}");
-                bool success = await BackupRestoreService.CreateBackupPackageAsync(
-                    dialog.FileName,
-                    selectedApps,
-                    selectedFolders,
-                    Log);
+                    Log(T("BackupStarting", dialog.FileName));
+                    bool success = await BackupRestoreService.CreateBackupPackageAsync(
+                        dialog.FileName,
+                        selectedApps,
+                        selectedFolders,
+                        Log);
 
-                if (success)
-                {
-                    MessageBox.Show("Sao lưu hoàn tất thành công!", "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
+                    if (success)
+                    {
+                        MessageBox.Show(T("BackupSuccessMessage"), T("SuccessTitle"), MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show(T("BackupFailureMessage"), T("BackupErrorTitle"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                    }
                 }
                 finally
                 {
                     _isBackupRunning = false;
                     BtnCreateBackup.IsEnabled = true;
+                    MainTabs.IsEnabled = true;
                 }
             }
         }
@@ -241,8 +234,15 @@ namespace BackupUtility.Views
         private static string GetBackupOutputDirectory()
         {
             var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Zney Backups");
-            Directory.CreateDirectory(directory);
-            return directory;
+            try
+            {
+                Directory.CreateDirectory(directory);
+                return directory;
+            }
+            catch (Exception)
+            {
+                return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            }
         }
 
         private async void BtnOpenBackupFile_Click(object sender, RoutedEventArgs e)
@@ -255,33 +255,37 @@ namespace BackupUtility.Views
 
             if (dialog.ShowDialog() == true)
             {
-                _loadedBackupFilePath = dialog.FileName;
-                TxtSelectedBackupFile.Text = Path.GetFileName(_loadedBackupFilePath);
-                Log($"Đang đọc file backup: {_loadedBackupFilePath}...");
+                var selectedBackupPath = dialog.FileName;
+                Log(T("ReadingBackup", selectedBackupPath));
 
-                var manifest = await BackupRestoreService.ReadManifestFromPackageAsync(_loadedBackupFilePath);
+                var manifest = await BackupRestoreService.ReadManifestFromPackageAsync(selectedBackupPath);
                 if (manifest == null)
                 {
                     _loadedBackupFilePath = string.Empty;
                     RestoreApps.Clear();
                     RestoreDataFolders.Clear();
-                    MessageBox.Show("File backup không hợp lệ hoặc bị lỗi!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    TxtSelectedBackupFile.SetResourceReference(TextBlock.TextProperty, "NoBackupSelected");
+                    MessageBox.Show(T("InvalidBackupMessage"), T("ErrorTitle"), MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
 
+                _loadedBackupFilePath = selectedBackupPath;
+                TxtSelectedBackupFile.Text = Path.GetFileName(_loadedBackupFilePath);
                 RestoreApps.Clear();
                 foreach (var app in manifest.Apps)
                 {
+                    app.IsSelected = false;
                     RestoreApps.Add(app);
                 }
 
                 RestoreDataFolders.Clear();
                 foreach (var folder in manifest.DataFolders)
                 {
+                    folder.IsSelected = false;
                     RestoreDataFolders.Add(folder);
                 }
 
-                Log($"Đọc file thành công. Tìm thấy {manifest.Apps.Count} ứng dụng và {manifest.DataFolders.Count} gói dữ liệu.");
+                Log(T("BackupReadSuccess", manifest.Apps.Count, manifest.DataFolders.Count));
             }
         }
 
@@ -290,7 +294,7 @@ namespace BackupUtility.Views
             if (_isRestoreRunning) return;
             if (string.IsNullOrEmpty(_loadedBackupFilePath) || !File.Exists(_loadedBackupFilePath))
             {
-                MessageBox.Show("Vui lòng chọn file backup hợp lệ trước!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(T("SelectValidBackupWarning"), T("NoticeTitle"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -299,29 +303,30 @@ namespace BackupUtility.Views
 
             if (appsToRestore.Count == 0 && dataToRestore.Count == 0)
             {
-                MessageBox.Show("Vui lòng tích chọn ít nhất 1 app hoặc 1 thư mục data muốn phục hồi!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(T("SelectRestoreItemsWarning"), T("NoticeTitle"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            Log("=== BẮT ĐẦU TIẾN TRÌNH PHỤC HỒI ===");
+            Log(T("RestoreStarted"));
             var confirmation = MessageBox.Show(
-                "Restoring can overwrite existing selected files. Continue only if this backup is trusted.",
-                "Confirm restore",
+                T("RestoreConfirmMessage"),
+                T("RestoreConfirmTitle"),
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
             if (confirmation != MessageBoxResult.Yes) return;
 
             _isRestoreRunning = true;
             BtnRestoreSelected.IsEnabled = false;
+            MainTabs.IsEnabled = false;
             try
             {
-            var restoreErrors = new List<string>();
-            var restoredFiles = 0;
+                var restoreErrors = new List<string>();
+                var restoredFiles = 0;
 
             // 1. Run only the supported workflow for each selected application.
             if (appsToRestore.Count > 0)
             {
-                Log($"Bắt đầu xử lý {appsToRestore.Count} ứng dụng theo luồng đã lưu...");
+                Log(T("ProcessingApps", appsToRestore.Count));
                 foreach (var app in appsToRestore)
                 {
                     var workflowResult = await AppRestoreWorkflowService.RestoreAsync(app, Log);
@@ -336,7 +341,7 @@ namespace BackupUtility.Views
             // 2. Phục hồi Local Data
             if (dataToRestore.Count > 0)
             {
-                Log($"Bắt đầu giải nén khôi phục {dataToRestore.Count} thư mục data...");
+                Log(T("RestoringData", dataToRestore.Count));
                 var restoreResult = await BackupRestoreService.RestoreSelectedDataAsync(_loadedBackupFilePath, dataToRestore, Log);
                 restoredFiles = restoreResult.RestoredFiles;
                 restoreErrors.AddRange(restoreResult.Errors);
@@ -344,28 +349,29 @@ namespace BackupUtility.Views
 
             foreach (var error in restoreErrors)
             {
-                Log($"CẢNH BÁO: {error}");
+                Log(T("WarningPrefix", error));
             }
 
             if (restoreErrors.Count > 0)
             {
-                Log($"Đã khôi phục {restoredFiles} tệp; một số mục bị bỏ qua hoặc thất bại.");
-                MessageBox.Show("Khôi phục hoàn tất nhưng có mục không an toàn hoặc không hợp lệ đã bị bỏ qua. Xem nhật ký để biết chi tiết.", "Hoàn tất có cảnh báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Log(T("RestorePartialLog", restoredFiles));
+                MessageBox.Show(T("RestorePartialMessage"), T("RestorePartialTitle"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            Log("=== HOÀN TẤT PHỤC HỒI ===");
-            MessageBox.Show("Tiến trình phục hồi hoàn tất!", "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
+            Log(T("RestoreDoneLog"));
+            MessageBox.Show(T("RestoreDoneMessage"), T("SuccessTitle"), MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                Log($"Restore failed safely: {ex.Message}");
-                MessageBox.Show("Restore could not complete. Review the log before trying again.", "Restore warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Log(T("RestoreFailedLog", ex.Message));
+                MessageBox.Show(T("RestoreFailedMessage"), T("RestoreWarningTitle"), MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             finally
             {
                 _isRestoreRunning = false;
                 BtnRestoreSelected.IsEnabled = true;
+                MainTabs.IsEnabled = true;
             }
         }
     }

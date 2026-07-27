@@ -20,4 +20,42 @@
   <sys:String x:Key="RestoreSelected" xmlns:sys="clr-namespace:System;assembly=mscorlib">Phục hồi các mục đã chọn</sys:String>
   <sys:String x:Key="StatusLog" xmlns:sys="clr-namespace:System;assembly=mscorlib">Trạng thái và nhật ký</sys:String>
   <sys:String x:Key="Language" xmlns:sys="clr-namespace:System;assembly=mscorlib">Ngôn ngữ</sys:String>
+  <sys:String x:Key="InitialPrompt" xmlns:sys="clr-namespace:System;assembly=mscorlib">Chọn Xuất hoặc Nhập để bắt đầu.</sys:String>
+  <sys:String x:Key="SelectImportPrompt" xmlns:sys="clr-namespace:System;assembly=mscorlib">Chọn file .zney để bắt đầu nhập.</sys:String>
+  <sys:String x:Key="NoticeTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Thông báo</sys:String>
+  <sys:String x:Key="ErrorTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Lỗi</sys:String>
+  <sys:String x:Key="SuccessTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Thành công</sys:String>
+  <sys:String x:Key="SelectBackupItemsWarning" xmlns:sys="clr-namespace:System;assembly=mscorlib">Chọn ít nhất một ứng dụng hoặc thư mục dữ liệu để sao lưu.</sys:String>
+  <sys:String x:Key="BackupStarting" xmlns:sys="clr-namespace:System;assembly=mscorlib">Đang tạo backup: {0}</sys:String>
+  <sys:String x:Key="BackupSuccessMessage" xmlns:sys="clr-namespace:System;assembly=mscorlib">Đã tạo backup. Hãy xem nhật ký để biết file bị khóa hoặc được bỏ qua.</sys:String>
+  <sys:String x:Key="BackupFailureMessage" xmlns:sys="clr-namespace:System;assembly=mscorlib">Không thể tạo backup. File .zney cũ không bị thay đổi.</sys:String>
+  <sys:String x:Key="BackupErrorTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Lỗi backup</sys:String>
+  <sys:String x:Key="ReadingBackup" xmlns:sys="clr-namespace:System;assembly=mscorlib">Đang đọc backup: {0}</sys:String>
+  <sys:String x:Key="InvalidBackupMessage" xmlns:sys="clr-namespace:System;assembly=mscorlib">File backup không hợp lệ, bị hỏng hoặc không được hỗ trợ.</sys:String>
+  <sys:String x:Key="BackupReadSuccess" xmlns:sys="clr-namespace:System;assembly=mscorlib">Đã đọc backup: {0} ứng dụng và {1} nhóm dữ liệu. Hãy chọn mục cần phục hồi.</sys:String>
+  <sys:String x:Key="SelectValidBackupWarning" xmlns:sys="clr-namespace:System;assembly=mscorlib">Hãy chọn file backup .zney hợp lệ trước.</sys:String>
+  <sys:String x:Key="SelectRestoreItemsWarning" xmlns:sys="clr-namespace:System;assembly=mscorlib">Chọn ít nhất một ứng dụng hoặc nhóm dữ liệu để phục hồi.</sys:String>
+  <sys:String x:Key="RestoreStarted" xmlns:sys="clr-namespace:System;assembly=mscorlib">=== BẮT ĐẦU PHỤC HỒI ===</sys:String>
+  <sys:String x:Key="RestoreConfirmMessage" xmlns:sys="clr-namespace:System;assembly=mscorlib">Phục hồi có thể ghi đè các file đã chọn. Chỉ tiếp tục khi bạn tin cậy backup này.</sys:String>
+  <sys:String x:Key="RestoreConfirmTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Xác nhận phục hồi</sys:String>
+  <sys:String x:Key="ProcessingApps" xmlns:sys="clr-namespace:System;assembly=mscorlib">Đang xử lý {0} ứng dụng đã chọn...</sys:String>
+  <sys:String x:Key="RestoringData" xmlns:sys="clr-namespace:System;assembly=mscorlib">Đang xác minh và phục hồi {0} nhóm dữ liệu...</sys:String>
+  <sys:String x:Key="WarningPrefix" xmlns:sys="clr-namespace:System;assembly=mscorlib">CẢNH BÁO: {0}</sys:String>
+  <sys:String x:Key="RestorePartialLog" xmlns:sys="clr-namespace:System;assembly=mscorlib">Đã phục hồi {0} file; một số mục bị bỏ qua hoặc thất bại.</sys:String>
+  <sys:String x:Key="RestorePartialMessage" xmlns:sys="clr-namespace:System;assembly=mscorlib">Phục hồi hoàn tất với cảnh báo. Hãy xem nhật ký hoạt động.</sys:String>
+  <sys:String x:Key="RestorePartialTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Hoàn tất với cảnh báo</sys:String>
+  <sys:String x:Key="RestoreDoneLog" xmlns:sys="clr-namespace:System;assembly=mscorlib">=== HOÀN TẤT PHỤC HỒI ===</sys:String>
+  <sys:String x:Key="RestoreDoneMessage" xmlns:sys="clr-namespace:System;assembly=mscorlib">Phục hồi hoàn tất thành công.</sys:String>
+  <sys:String x:Key="RestoreFailedLog" xmlns:sys="clr-namespace:System;assembly=mscorlib">Phục hồi dừng an toàn: {0}</sys:String>
+  <sys:String x:Key="RestoreFailedMessage" xmlns:sys="clr-namespace:System;assembly=mscorlib">Không thể hoàn tất phục hồi. Hãy xem nhật ký trước khi thử lại.</sys:String>
+  <sys:String x:Key="RestoreWarningTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Cảnh báo phục hồi</sys:String>
+  <sys:String x:Key="ScanStarting" xmlns:sys="clr-namespace:System;assembly=mscorlib">Đang quét shortcut, ứng dụng đã cài và các thư mục dữ liệu...</sys:String>
+  <sys:String x:Key="ShortcutScanReady" xmlns:sys="clr-namespace:System;assembly=mscorlib">Đã tìm thấy {0} ứng dụng từ shortcut. Registry đang được quét nền...</sys:String>
+  <sys:String x:Key="BaseScanReady" xmlns:sys="clr-namespace:System;assembly=mscorlib">Đã tìm thấy {0} ứng dụng và {1} nhóm dữ liệu. Kết quả winget tùy chọn sẽ được thêm khi sẵn sàng.</sys:String>
+  <sys:String x:Key="ScanCompleteStatus" xmlns:sys="clr-namespace:System;assembly=mscorlib">Quét hoàn tất (100%)</sys:String>
+  <sys:String x:Key="ScanFound" xmlns:sys="clr-namespace:System;assembly=mscorlib">Tìm thấy {0} ứng dụng và {1} nhóm dữ liệu. Hãy chọn các mục cần xuất.</sys:String>
+  <sys:String x:Key="ScanCancelled" xmlns:sys="clr-namespace:System;assembly=mscorlib">Đã hủy quét.</sys:String>
+  <sys:String x:Key="ScanFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Quét đã dừng an toàn: {0}</sys:String>
+  <sys:String x:Key="ScanWarningMessage" xmlns:sys="clr-namespace:System;assembly=mscorlib">Không thể hoàn tất quét. Các kết quả đã tìm thấy vẫn được giữ lại.</sys:String>
+  <sys:String x:Key="ScanWarningTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Cảnh báo quét</sys:String>
 </ResourceDictionary>

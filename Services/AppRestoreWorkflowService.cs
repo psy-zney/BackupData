@@ -22,23 +22,23 @@ namespace BackupUtility.Services
                     ? new AppRestoreWorkflowResult
                     {
                         Succeeded = true,
-                        Message = "Steam đã được cài. Hãy mở Steam, đăng nhập và tự chọn game trong thư viện. Ứng dụng không truy cập phiên đăng nhập hoặc tự tải game."
+                        Message = "Steam was installed. Open Steam, sign in, and choose games from your library. Zney does not access credentials or download games."
                     }
-                    : new AppRestoreWorkflowResult { Message = "Không thể cài Steam qua winget." };
+                    : new AppRestoreWorkflowResult { Message = "Steam could not be installed through winget." };
             }
 
             if (app.RestoreWorkflow.Equals("Winget", StringComparison.OrdinalIgnoreCase))
             {
                 var installed = await WingetService.InstallWingetPackageAsync(app.PackageId, onLog);
                 return installed
-                    ? new AppRestoreWorkflowResult { Succeeded = true, Message = $"Đã cài {app.Name}." }
-                    : new AppRestoreWorkflowResult { Message = $"Không thể cài {app.Name} qua winget." };
+                    ? new AppRestoreWorkflowResult { Succeeded = true, Message = $"Installed {app.Name}." }
+                    : new AppRestoreWorkflowResult { Message = $"{app.Name} could not be installed through winget." };
             }
 
             return new AppRestoreWorkflowResult
             {
                 Skipped = true,
-                Message = $"Bỏ qua {app.Name}: {app.RestoreInstructions}"
+                Message = $"Skipped {app.Name}: {app.RestoreInstructions}"
             };
         }
     }

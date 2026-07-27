@@ -29,7 +29,7 @@ namespace BackupUtility.Services
         {
             WriteAllowedValues(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", ExplorerValueNames, snapshot.ExplorerAdvanced, onProgress);
             WriteAllowedValues(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize", PersonalizationValueNames, snapshot.Personalization, onProgress);
-            onProgress?.Invoke("Đã áp dụng các cài đặt Windows đã chọn. Một số thay đổi có thể cần đăng xuất/đăng nhập lại.");
+            onProgress?.Invoke("Selected Windows settings were applied. Some changes may require signing out and back in.");
         }
 
         private static Dictionary<string, int> ReadValues(string keyPath, IEnumerable<string> names)
@@ -53,7 +53,7 @@ namespace BackupUtility.Services
                 if (values.TryGetValue(name, out var value))
                 {
                     key.SetValue(name, value, RegistryValueKind.DWord);
-                    onProgress?.Invoke($"Đã áp dụng cài đặt Windows: {name}.");
+                    onProgress?.Invoke($"Applied Windows setting: {name}.");
                 }
             }
         }

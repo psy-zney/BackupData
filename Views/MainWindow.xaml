@@ -117,7 +117,7 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-                        <Button Content="{DynamicResource ChooseBackup}" Click="BtnOpenBackupFile_Click"/>
+                        <Button x:Name="BtnOpenBackup" Content="{DynamicResource ChooseBackup}" Click="BtnOpenBackupFile_Click"/>
                         <TextBlock x:Name="TxtSelectedBackupFile" Text="{DynamicResource NoBackupSelected}" VerticalAlignment="Center" Margin="15,0,0,0" Foreground="#FFCC00" FontWeight="SemiBold"/>
                     </StackPanel>
                     <Grid Grid.Row="1">

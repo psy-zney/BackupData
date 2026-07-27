@@ -20,4 +20,42 @@
   <sys:String x:Key="RestoreSelected" xmlns:sys="clr-namespace:System;assembly=mscorlib">Restore selected items</sys:String>
   <sys:String x:Key="StatusLog" xmlns:sys="clr-namespace:System;assembly=mscorlib">Status and activity log</sys:String>
   <sys:String x:Key="Language" xmlns:sys="clr-namespace:System;assembly=mscorlib">Language</sys:String>
+  <sys:String x:Key="InitialPrompt" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose Export or Import to begin.</sys:String>
+  <sys:String x:Key="SelectImportPrompt" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose a .zney file to begin importing.</sys:String>
+  <sys:String x:Key="NoticeTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Notice</sys:String>
+  <sys:String x:Key="ErrorTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Error</sys:String>
+  <sys:String x:Key="SuccessTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Success</sys:String>
+  <sys:String x:Key="SelectBackupItemsWarning" xmlns:sys="clr-namespace:System;assembly=mscorlib">Select at least one application or data folder to back up.</sys:String>
+  <sys:String x:Key="BackupStarting" xmlns:sys="clr-namespace:System;assembly=mscorlib">Creating backup: {0}</sys:String>
+  <sys:String x:Key="BackupSuccessMessage" xmlns:sys="clr-namespace:System;assembly=mscorlib">The backup was created. Review the log for locked or skipped files.</sys:String>
+  <sys:String x:Key="BackupFailureMessage" xmlns:sys="clr-namespace:System;assembly=mscorlib">The backup could not be created. An existing .zney file was not changed.</sys:String>
+  <sys:String x:Key="BackupErrorTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Backup error</sys:String>
+  <sys:String x:Key="ReadingBackup" xmlns:sys="clr-namespace:System;assembly=mscorlib">Reading backup: {0}</sys:String>
+  <sys:String x:Key="InvalidBackupMessage" xmlns:sys="clr-namespace:System;assembly=mscorlib">The backup is invalid, damaged, or unsupported.</sys:String>
+  <sys:String x:Key="BackupReadSuccess" xmlns:sys="clr-namespace:System;assembly=mscorlib">Backup loaded: {0} applications and {1} data groups. Select the items to restore.</sys:String>
+  <sys:String x:Key="SelectValidBackupWarning" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose a valid .zney backup first.</sys:String>
+  <sys:String x:Key="SelectRestoreItemsWarning" xmlns:sys="clr-namespace:System;assembly=mscorlib">Select at least one application or data group to restore.</sys:String>
+  <sys:String x:Key="RestoreStarted" xmlns:sys="clr-namespace:System;assembly=mscorlib">=== RESTORE STARTED ===</sys:String>
+  <sys:String x:Key="RestoreConfirmMessage" xmlns:sys="clr-namespace:System;assembly=mscorlib">Restoring can overwrite selected local files. Continue only if this backup is trusted.</sys:String>
+  <sys:String x:Key="RestoreConfirmTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Confirm restore</sys:String>
+  <sys:String x:Key="ProcessingApps" xmlns:sys="clr-namespace:System;assembly=mscorlib">Processing {0} selected applications...</sys:String>
+  <sys:String x:Key="RestoringData" xmlns:sys="clr-namespace:System;assembly=mscorlib">Verifying and restoring {0} selected data groups...</sys:String>
+  <sys:String x:Key="WarningPrefix" xmlns:sys="clr-namespace:System;assembly=mscorlib">WARNING: {0}</sys:String>
+  <sys:String x:Key="RestorePartialLog" xmlns:sys="clr-namespace:System;assembly=mscorlib">Restored {0} files; some selected items were skipped or failed.</sys:String>
+  <sys:String x:Key="RestorePartialMessage" xmlns:sys="clr-namespace:System;assembly=mscorlib">Restore completed with warnings. Review the activity log.</sys:String>
+  <sys:String x:Key="RestorePartialTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Completed with warnings</sys:String>
+  <sys:String x:Key="RestoreDoneLog" xmlns:sys="clr-namespace:System;assembly=mscorlib">=== RESTORE COMPLETED ===</sys:String>
+  <sys:String x:Key="RestoreDoneMessage" xmlns:sys="clr-namespace:System;assembly=mscorlib">Restore completed successfully.</sys:String>
+  <sys:String x:Key="RestoreFailedLog" xmlns:sys="clr-namespace:System;assembly=mscorlib">Restore failed safely: {0}</sys:String>
+  <sys:String x:Key="RestoreFailedMessage" xmlns:sys="clr-namespace:System;assembly=mscorlib">Restore could not complete. Review the log before trying again.</sys:String>
+  <sys:String x:Key="RestoreWarningTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Restore warning</sys:String>
+  <sys:String x:Key="ScanStarting" xmlns:sys="clr-namespace:System;assembly=mscorlib">Scanning shortcuts, installed applications, and selected data folders...</sys:String>
+  <sys:String x:Key="ShortcutScanReady" xmlns:sys="clr-namespace:System;assembly=mscorlib">Shortcut scan found {0} applications. Registry scans are running in the background...</sys:String>
+  <sys:String x:Key="BaseScanReady" xmlns:sys="clr-namespace:System;assembly=mscorlib">Base scan found {0} applications and {1} data groups. Optional winget results will be added when available.</sys:String>
+  <sys:String x:Key="ScanCompleteStatus" xmlns:sys="clr-namespace:System;assembly=mscorlib">Scan complete (100%)</sys:String>
+  <sys:String x:Key="ScanFound" xmlns:sys="clr-namespace:System;assembly=mscorlib">Found {0} applications and {1} data groups. Select the items to export.</sys:String>
+  <sys:String x:Key="ScanCancelled" xmlns:sys="clr-namespace:System;assembly=mscorlib">Scan cancelled.</sys:String>
+  <sys:String x:Key="ScanFailed" xmlns:sys="clr-namespace:System;assembly=mscorlib">Scan failed safely: {0}</sys:String>
+  <sys:String x:Key="ScanWarningMessage" xmlns:sys="clr-namespace:System;assembly=mscorlib">The scan could not complete. Results already found were kept.</sys:String>
+  <sys:String x:Key="ScanWarningTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Scan warning</sys:String>
 </ResourceDictionary>
