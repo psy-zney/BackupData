@@ -29,8 +29,7 @@ namespace BackupUtility.Views
             LvRestoreApps.ItemsSource = RestoreApps;
             LvRestoreData.ItemsSource = RestoreDataFolders;
 
-            Log("Ứng dụng sao lưu & phục hồi sẵn sàng. Hãy bấm 'Quét Phần Mềm Đã Cài' để bắt đầu.");
-            LoadDefaultDataFolders();
+            Log("Chọn Export hoặc Import để bắt đầu.");
         }
 
         private void Log(string message)
@@ -52,16 +51,38 @@ namespace BackupUtility.Views
             }
         }
 
-        private async void BtnScanApps_Click(object sender, RoutedEventArgs e)
+        private async Task ScanExportItemsAsync()
         {
-            Log("Đang quét phần mềm trên hệ thống...");
+            Log("Đang quét ứng dụng và các thư mục dữ liệu quan trọng...");
             BackupApps.Clear();
+            LoadDefaultDataFolders();
             var scanned = await AppScannerService.ScanInstalledAppsAsync();
             foreach (var app in scanned)
             {
                 BackupApps.Add(app);
             }
-            Log($"Tìm thấy {scanned.Count} ứng dụng đã cài.");
+            Log($"Tìm thấy {scanned.Count} ứng dụng và {BackupDataFolders.Count} nhóm dữ liệu. Hãy tick mục muốn export.");
+        }
+
+        private async void BtnChooseExport_Click(object sender, RoutedEventArgs e)
+        {
+            ModeSelector.Visibility = Visibility.Collapsed;
+            MainTabs.Visibility = Visibility.Visible;
+            MainTabs.SelectedIndex = 0;
+            await ScanExportItemsAsync();
+        }
+
+        private void BtnChooseImport_Click(object sender, RoutedEventArgs e)
+        {
+            ModeSelector.Visibility = Visibility.Collapsed;
+            MainTabs.Visibility = Visibility.Visible;
+            MainTabs.SelectedIndex = 1;
+            Log("Chọn file .zney để bắt đầu import.");
+        }
+
+        private async void BtnScanApps_Click(object sender, RoutedEventArgs e)
+        {
+            await ScanExportItemsAsync();
         }
 
         private async void BtnCreateBackup_Click(object sender, RoutedEventArgs e)
@@ -80,6 +101,7 @@ namespace BackupUtility.Views
                 Filter = "Zney Backup (*.zney)|*.zney",
                 DefaultExt = ".zney",
                 AddExtension = true,
+                InitialDirectory = GetBackupOutputDirectory(),
                 FileName = $"Zney_Backup_{DateTime.Now:yyyyMMdd_HHmmss}.zney"
             };
 
@@ -97,6 +119,13 @@ namespace BackupUtility.Views
                     MessageBox.Show("Sao lưu hoàn tất thành công!", "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
+        }
+
+        private static string GetBackupOutputDirectory()
+        {
+            var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Zney Backups");
+            Directory.CreateDirectory(directory);
+            return directory;
         }
 
         private async void BtnOpenBackupFile_Click(object sender, RoutedEventArgs e)

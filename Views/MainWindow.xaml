@@ -37,7 +37,18 @@
             </StackPanel>
         </Border>
 
-        <TabControl Grid.Row="1" Background="#1E1E1E" BorderBrush="#333333">
+        <Grid x:Name="ModeSelector" Grid.Row="1">
+            <Border Background="#1E1E1E" CornerRadius="8" Padding="40" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="680">
+                <StackPanel>
+                    <TextBlock Text="Bạn muốn làm gì?" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Chọn một luồng để bắt đầu. Export sẽ quét dữ liệu trước khi tạo file .zney; Import chỉ nhận file .zney." TextWrapping="Wrap" TextAlignment="Center" Foreground="#AAAAAA" Margin="0,12,0,25"/>
+                    <Button Content="EXPORT — Quét và tạo backup .zney" Click="BtnChooseExport_Click" Background="#28A745" Height="50" FontSize="16"/>
+                    <Button Content="IMPORT — Chọn file .zney để phục hồi" Click="BtnChooseImport_Click" Height="50" FontSize="16"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <TabControl x:Name="MainTabs" Grid.Row="1" Background="#1E1E1E" BorderBrush="#333333" Visibility="Collapsed">
             <TabItem Header="Sao lưu" Foreground="White" FontSize="14" Padding="15,8">
                 <Grid Margin="10">
                     <Grid.ColumnDefinitions>
@@ -46,7 +57,7 @@
                     </Grid.ColumnDefinitions>
                     <GroupBox Grid.Column="0" Header="1. Ứng dụng đã cài" Foreground="#007ACC" Margin="5" BorderBrush="#333333">
                         <DockPanel>
-                            <Button DockPanel.Dock="Top" Content="Quét phần mềm đã cài" Click="BtnScanApps_Click" HorizontalAlignment="Left" Background="#2D2D30"/>
+                            <Button DockPanel.Dock="Top" Content="Quét ứng dụng và thư mục" Click="BtnScanApps_Click" HorizontalAlignment="Left" Background="#2D2D30"/>
                             <ListView x:Name="LvBackupApps" Background="#252526" Foreground="White" BorderThickness="0" Margin="0,5,0,0">
                                 <ListView.ItemTemplate>
                                     <DataTemplate>

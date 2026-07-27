@@ -50,9 +50,9 @@ Mỗi archive trong `archives/` nén độc lập. `manifest.json` giữ danh s�
 
 ## Sử dụng
 
-1. Mở **Zney Backup & Restore**, quét phần mềm và chọn nhóm dữ liệu.
-2. Xuất file `.zney` vào ổ đĩa ngoài hoặc vị trí an toàn.
-3. Trên máy mới, chọn đúng file `.zney`, xem lại từng ứng dụng/nhóm dữ liệu, rồi bấm phục hồi.
+1. Mở **Zney Backup & Restore** và chọn một trong hai luồng: **Export** hoặc **Import**.
+2. Với **Export**, ứng dụng tự quét phần mềm và các nhóm thư mục, hiển thị checklist; chọn mục cần sao lưu rồi bấm tạo backup. Hộp lưu mặc định mở ở `Documents\Zney Backups` và tạo file `.zney` trên máy.
+3. Với **Import**, chọn đúng file `.zney`, xem lại từng ứng dụng/nhóm dữ liệu, rồi bấm phục hồi.
 4. Với Steam, đăng nhập trong ứng dụng Steam sau khi Zney hoàn tất bước cài Steam.
 
 Nên đóng Chrome, Edge, VS Code và các ứng dụng đang dùng dữ liệu trước khi backup.
@@ -63,7 +63,7 @@ Workflow [Build Zney MSI](.github/workflows/build-msi.yml) chạy trên GitHub-h
 
 1. Push source lên GitHub.
 2. Vào **Actions** → **Build Zney MSI** → **Run workflow**, hoặc push tag `v*`.
-3. Tải artifact `ZneyBackup-msi` từ workflow thành công.
+3. Tải artifact `ZneyBackup-msi` từ workflow thành công. Khi push tag `v*`, workflow cũng tạo GitHub Release và đính kèm MSI.
 
 Workflow restore dependency, chạy test, publish ứng dụng Windows x64 self-contained và đóng gói `ZneyBackup.msi` bằng WiX.
 
