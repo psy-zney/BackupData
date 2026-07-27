@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using BackupUtility.Models;
 using BackupUtility.Services;
 using Microsoft.Win32;
@@ -39,6 +40,14 @@ namespace BackupUtility.Views
                 TxtLog.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}\n");
                 TxtLog.ScrollToEnd();
             });
+        }
+
+        private void LanguageSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (LanguageSelector.SelectedItem is ComboBoxItem { Tag: string languageCode })
+            {
+                BackupUtility.App.SetLanguage(languageCode);
+            }
         }
 
         private void LoadDefaultDataFolders()

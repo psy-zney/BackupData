@@ -3,69 +3,90 @@
 [![Build Zney MSI](https://github.com/psy-zney/BackupData/actions/workflows/build-msi.yml/badge.svg?branch=master)](https://github.com/psy-zney/BackupData/actions/workflows/build-msi.yml)
 [![Release](https://img.shields.io/github/v/release/psy-zney/BackupData?display_name=tag)](https://github.com/psy-zney/BackupData/releases)
 
-Ứng dụng Windows giúp sao lưu dữ liệu cá nhân, cấu hình ứng dụng và một tập cài đặt Windows an toàn trước khi cài lại máy hoặc chuyển máy. Zney tạo và chỉ đọc định dạng `.zney`; không chạy script từ file backup.
+Zney Backup & Restore is a Windows application for preparing a PC before a Windows reinstall or migration. It backs up selected personal data, application configuration, and a small allow-listed set of Windows preferences into a single `.zney` package.
 
-## Tải và cài đặt
+Zney creates and reads `.zney` files only. It never runs scripts from a backup package.
 
-Tải `ZneyBackup.msi` từ [GitHub Releases](https://github.com/psy-zney/BackupData/releases/latest), cài đặt, sau đó mở **Zney Backup & Restore** từ Start Menu hoặc thư mục cài đặt.
+## Download and install
 
-Khi gỡ cài đặt, MSI chỉ dọn `%LOCALAPPDATA%\ZneyBackup` — cache riêng của Zney. File `.zney`, Documents, Photos, Videos, Steam và dữ liệu ứng dụng khác luôn được giữ nguyên.
+Download `ZneyBackup.msi` from [GitHub Releases](https://github.com/psy-zney/BackupData/releases/latest), install it, then open **Zney Backup & Restore** from the Start menu or installation folder.
 
-## Luồng sử dụng
+Uninstalling removes only Zney's internal cache at `%LOCALAPPDATA%\ZneyBackup`. It never removes `.zney` backups, Documents, Photos, Videos, Steam data, or third-party application data.
+
+## Language
+
+The application starts in **English**. Use the language selector in the top-right corner to switch to **Tiếng Việt** without restarting the application. The main navigation, buttons, labels, and workflow screen update immediately.
+
+## Application workflow
 
 ```mermaid
 flowchart TD
-    A[Mở Zney Backup & Restore] --> B{Chọn luồng}
-    B -->|Export| C[Quét ứng dụng và dữ liệu quan trọng]
-    C --> D[Hiện checklist theo nhóm]
-    D --> E[Chọn mục cần sao lưu]
-    E --> F[Tạo file .zney tại máy]
-    B -->|Import| G[Chọn một file .zney]
-    G --> H[Đọc manifest và hiện checklist]
-    H --> I[Chọn app / dữ liệu cần phục hồi]
-    I --> J[Kiểm tra SHA-256 rồi phục hồi]
+    Start[Open Zney Backup & Restore] --> Mode{Choose a mode}
+
+    Mode -->|Export| ScanApps[Scan applications: Winget / Steam / Manual]
+    ScanApps --> ScanData[Scan application settings, Windows settings, photos, documents and videos]
+    ScanData --> ExportList[Show a categorized checklist]
+    ExportList --> ExportChoice[Select the data to export]
+    ExportChoice --> CreatePackage[Create manifest JSON, metadata JSON and a ZIP archive per data group]
+    CreatePackage --> Hash[Seal every file with SHA-256]
+    Hash --> Save[Choose a local location and save the .zney file]
+    Save --> ExportDone[Export complete]
+
+    Mode -->|Import| PickFile[Select a .zney file]
+    PickFile --> Validate[Validate extension, manifest and safe paths]
+    Validate --> ImportList[Show application, settings and data checklists]
+    ImportList --> ImportChoice[Select items to restore]
+    ImportChoice --> AppFlow{Application workflow}
+    AppFlow -->|Winget| Install[Install through winget]
+    AppFlow -->|Steam| Steam[Install Steam and ask the user to sign in]
+    AppFlow -->|Manual| Skip[Skip unknown installers]
+    Install --> RestoreData[Verify SHA-256 and restore selected data]
+    Steam --> RestoreData
+    Skip --> RestoreData
+    RestoreData --> ApplyWindows[Apply allow-listed Windows settings]
+    ApplyWindows --> ImportDone[Import complete and log results]
 ```
 
-### Export
+## Export
 
-1. Chọn **Export — Quét và tạo backup .zney**.
-2. Chờ Zney quét ứng dụng và các thư mục được hỗ trợ.
-3. Tick đúng dữ liệu cần sao lưu.
-4. Chọn vị trí lưu; thư mục mặc định là `Documents\Zney Backups`.
-5. Zney tạo một file `.zney` duy nhất.
+1. Choose **Export — Scan and create a .zney backup**.
+2. Zney scans supported applications and data groups.
+3. Review the checklist and select only the items you want.
+4. Choose a save location. The default folder is `Documents\Zney Backups`.
+5. Zney creates one `.zney` file on your computer.
 
-### Import
+Close Chrome, Edge, VS Code, and related applications before exporting their profiles so files are not locked or left unwritten.
 
-1. Chọn **Import — Chọn file .zney để phục hồi**.
-2. Chỉ định file `.zney` đã tạo bởi Zney.
-3. Kiểm tra checklist, bỏ chọn mọi mục không mong muốn.
-4. Bấm phục hồi. Mỗi file được kiểm SHA-256 trước khi ghi đè.
+## Import
 
-> Đóng Chrome, Edge, VS Code và các ứng dụng liên quan trước khi Export để tránh file bị khóa hoặc chưa kịp ghi xuống đĩa.
+1. Choose **Import — Select a .zney file to restore**.
+2. Select a `.zney` package created by Zney.
+3. Review every application and data group; clear any item you do not want to restore.
+4. Start import. Files are verified with SHA-256 before they can overwrite local files.
 
-## Dữ liệu được hỗ trợ
+## Data groups
 
-| Nhóm | Bao gồm | Mặc định |
+| Group | Included data | Default selection |
 | --- | --- | --- |
-| `ApplicationSettings` | VS Code, Chrome, Edge, Git, Windows Terminal | Chọn |
-| `WindowsSettings` | Explorer, theme, transparency, taskbar alignment | Chọn |
-| `Photos` | Pictures | Không chọn |
-| `Documents` | Documents | Không chọn |
-| `Videos` | Videos | Không chọn |
+| `ApplicationSettings` | VS Code, Chrome, Edge, Git, Windows Terminal | Selected |
+| `WindowsSettings` | Explorer, light/dark theme, transparency, taskbar alignment | Selected |
+| `Photos` | Pictures folder | Not selected |
+| `Documents` | Documents folder | Not selected |
+| `Videos` | Videos folder | Not selected |
 
-Photos, Documents và Videos được nhận diện nhưng không tự tick vì có thể rất lớn. Hãy sao lưu thử nhóm nhỏ trước khi sao lưu toàn bộ dữ liệu media.
+Photos, Documents, and Videos are detected but not selected automatically because they can be very large. Test with a small data set before exporting an entire media library.
 
-## Phục hồi ứng dụng
+## Application restore behavior
 
-| Luồng | Hành vi |
+| Workflow | Behavior |
 | --- | --- |
-| `Winget` | Cài tự động bằng package ID đã lưu. |
-| `Steam` | Cài Steam qua `Valve.Steam`, sau đó người dùng tự mở Steam, đăng nhập và quản lý game. Zney không lưu đăng nhập hoặc tự tải game. |
-| `Manual` | Không có nguồn cài đáng tin cậy; chỉ hiển thị thông tin và bỏ qua. |
+| `Winget` | Installs automatically with the saved package ID. |
+| `Steam` | Installs Steam using `Valve.Steam`, then stops so the user can open Steam, sign in, and manage games. Zney does not store credentials or download games. |
+| `Manual` | Has no trusted installer source. Zney displays the entry and skips automatic installation. |
 
-## Định dạng `.zney`
+## `.zney` package layout
 
-`.zney` là ZIP container riêng của Zney. Mỗi nhóm dữ liệu có archive nén độc lập; JSON lưu metadata/cài đặt; manifest giữ hash từng file.
+`.zney` is a Zney-specific ZIP container. Each data group has its own compressed archive; JSON files hold metadata and settings; the manifest stores a hash for every backed-up file.
 
 ```text
 manifest.json
@@ -81,52 +102,22 @@ archives/
   Personal_photos.zip
 ```
 
-Zney chặn Zip Slip, giới hạn dung lượng giải nén và chỉ phục hồi về vùng dữ liệu người dùng cho phép. Chỉ mở file `.zney` mà bạn tin cậy.
+Zney blocks Zip Slip paths, enforces an extraction-size limit, and restores only to permitted user-data locations. Open `.zney` files only from sources you trust.
 
-## Workflow hoạt động trong app
+## Validation and releases
 
-```mermaid
-flowchart TD
-    Start[Mở Zney Backup & Restore] --> Mode{Export hay Import?}
+Every push to `master` runs the GitHub Actions workflow in [`.github/workflows/build-msi.yml`](.github/workflows/build-msi.yml). It runs automated integrity tests, publishes a self-contained Windows x64 app, and creates an MSI. A `v*` tag additionally creates a GitHub Release and attaches the MSI.
 
-    Mode -->|Export| ScanApps[Quét app: Winget / Steam / Manual]
-    ScanApps --> ScanData[Quét App Settings, Windows Settings, Photos, Documents, Videos]
-    ScanData --> ExportList[Hiện checklist theo nhóm]
-    ExportList --> ExportChoice[Người dùng tick dữ liệu cần sao lưu]
-    ExportChoice --> CreatePackage[Tạo manifest JSON, metadata JSON và archive ZIP riêng theo nhóm]
-    CreatePackage --> Hash[Niêm phong SHA-256 từng tệp]
-    Hash --> Save[Chọn vị trí và lưu file .zney]
-    Save --> ExportDone[Hoàn tất Export]
+Automated tests cover:
 
-    Mode -->|Import| PickFile[Chọn file .zney]
-    PickFile --> Validate[Kiểm tra đuôi file, manifest và đường dẫn an toàn]
-    Validate --> ImportList[Hiện checklist app, cài đặt và dữ liệu]
-    ImportList --> ImportChoice[Người dùng tick mục cần phục hồi]
-    ImportChoice --> AppFlow{Luồng ứng dụng}
-    AppFlow -->|Winget| Install[Cài app qua winget]
-    AppFlow -->|Steam| Steam[Chỉ cài Steam, yêu cầu người dùng đăng nhập]
-    AppFlow -->|Manual| Skip[Bỏ qua, không chạy installer không xác minh]
-    Install --> RestoreData[Kiểm SHA-256 và phục hồi dữ liệu đã chọn]
-    Steam --> RestoreData
-    Skip --> RestoreData
-    RestoreData --> ApplyWindows[Áp lại Windows Settings trong allow-list]
-    ApplyWindows --> ImportDone[Hoàn tất Import và ghi nhật ký]
-```
+- Creating a `.zney`, reading its manifest, and restoring a file.
+- Detecting a modified archive with SHA-256 before overwrite.
+- Blocking Zip Slip paths.
 
-Các điểm kiểm soát của người dùng nằm ở hai checklist: trước khi tạo `.zney` và trước khi phục hồi. Zney không tự tải game Steam, không tự chạy script, không tự chọn ảnh/tài liệu/video dung lượng lớn.
+The desktop UI, Steam sign-in, and real browser profiles require manual testing on an interactive Windows machine. Use a secondary Windows account or a small test data set before restoring important data.
 
-## Kiểm thử
+## Security boundaries
 
-Pipeline chạy các test lõi sau trước khi đóng gói:
-
-- Tạo `.zney`, đọc manifest và khôi phục file.
-- Phát hiện archive bị sửa bằng SHA-256 trước khi ghi đè.
-- Chặn đường dẫn Zip Slip.
-
-UI, đăng nhập Steam và profile trình duyệt cần kiểm thử thủ công trên Windows tương tác. Khuyến nghị thử với một thư mục cấu hình nhỏ hoặc tài khoản Windows phụ trước khi dùng cho dữ liệu quan trọng.
-
-## Giới hạn bảo mật có chủ đích
-
-- Không sao lưu mật khẩu, token đăng nhập hay khóa riêng.
-- Không tự chạy installer không xác minh hoặc script trong backup.
-- SHA-256 phát hiện thay đổi dữ liệu nhưng không thay thế chữ ký số; luôn chỉ dùng backup từ nguồn tin cậy.
+- Zney does not back up passwords, sign-in tokens, or private keys.
+- Zney does not execute backup scripts or unverified installers.
+- SHA-256 detects modified archive contents but is not a replacement for a digital signature. Only import backups you trust.

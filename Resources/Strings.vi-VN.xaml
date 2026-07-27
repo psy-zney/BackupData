@@ -1,0 +1,23 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <sys:String x:Key="AppTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Zney Sao lưu &amp; Phục hồi</sys:String>
+  <sys:String x:Key="HeaderTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">ZNEY SAO LƯU &amp; PHỤC HỒI</sys:String>
+  <sys:String x:Key="HeaderSubtitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Chỉ nhận file .zney. Dữ liệu được kiểm tra SHA-256 trước khi ghi đè.</sys:String>
+  <sys:String x:Key="ChooseMode" xmlns:sys="clr-namespace:System;assembly=mscorlib">Bạn muốn làm gì?</sys:String>
+  <sys:String x:Key="ChooseModeHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Export quét dữ liệu trước khi tạo .zney. Import chỉ nhận file .zney.</sys:String>
+  <sys:String x:Key="ExportStart" xmlns:sys="clr-namespace:System;assembly=mscorlib">EXPORT — Quét và tạo backup .zney</sys:String>
+  <sys:String x:Key="ImportStart" xmlns:sys="clr-namespace:System;assembly=mscorlib">IMPORT — Chọn file .zney để phục hồi</sys:String>
+  <sys:String x:Key="ExportTab" xmlns:sys="clr-namespace:System;assembly=mscorlib">Xuất dữ liệu</sys:String>
+  <sys:String x:Key="ImportTab" xmlns:sys="clr-namespace:System;assembly=mscorlib">Nhập dữ liệu</sys:String>
+  <sys:String x:Key="InstalledApps" xmlns:sys="clr-namespace:System;assembly=mscorlib">1. Ứng dụng đã cài</sys:String>
+  <sys:String x:Key="ScanItems" xmlns:sys="clr-namespace:System;assembly=mscorlib">Quét ứng dụng và thư mục</sys:String>
+  <sys:String x:Key="LocalData" xmlns:sys="clr-namespace:System;assembly=mscorlib">2. Dữ liệu cục bộ</sys:String>
+  <sys:String x:Key="CreateBackup" xmlns:sys="clr-namespace:System;assembly=mscorlib">Tạo file backup (.ZNEY)</sys:String>
+  <sys:String x:Key="ChooseBackup" xmlns:sys="clr-namespace:System;assembly=mscorlib">Chọn file backup (.zney)</sys:String>
+  <sys:String x:Key="NoBackupSelected" xmlns:sys="clr-namespace:System;assembly=mscorlib">Chưa chọn file .zney</sys:String>
+  <sys:String x:Key="RestoreApps" xmlns:sys="clr-namespace:System;assembly=mscorlib">Ứng dụng và luồng phục hồi</sys:String>
+  <sys:String x:Key="RestoreData" xmlns:sys="clr-namespace:System;assembly=mscorlib">Dữ liệu cục bộ được niêm phong SHA-256</sys:String>
+  <sys:String x:Key="RestoreSelected" xmlns:sys="clr-namespace:System;assembly=mscorlib">Phục hồi các mục đã chọn</sys:String>
+  <sys:String x:Key="StatusLog" xmlns:sys="clr-namespace:System;assembly=mscorlib">Trạng thái và nhật ký</sys:String>
+  <sys:String x:Key="Language" xmlns:sys="clr-namespace:System;assembly=mscorlib">Ngôn ngữ</sys:String>
+</ResourceDictionary>

@@ -1,0 +1,23 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <sys:String x:Key="AppTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Zney Backup &amp; Restore</sys:String>
+  <sys:String x:Key="HeaderTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">ZNEY BACKUP &amp; RESTORE</sys:String>
+  <sys:String x:Key="HeaderSubtitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">Only .zney files are accepted. Data is verified with SHA-256 before overwrite.</sys:String>
+  <sys:String x:Key="ChooseMode" xmlns:sys="clr-namespace:System;assembly=mscorlib">What would you like to do?</sys:String>
+  <sys:String x:Key="ChooseModeHint" xmlns:sys="clr-namespace:System;assembly=mscorlib">Export scans data before creating a .zney file. Import accepts .zney files only.</sys:String>
+  <sys:String x:Key="ExportStart" xmlns:sys="clr-namespace:System;assembly=mscorlib">EXPORT — Scan and create a .zney backup</sys:String>
+  <sys:String x:Key="ImportStart" xmlns:sys="clr-namespace:System;assembly=mscorlib">IMPORT — Select a .zney file to restore</sys:String>
+  <sys:String x:Key="ExportTab" xmlns:sys="clr-namespace:System;assembly=mscorlib">Export</sys:String>
+  <sys:String x:Key="ImportTab" xmlns:sys="clr-namespace:System;assembly=mscorlib">Import</sys:String>
+  <sys:String x:Key="InstalledApps" xmlns:sys="clr-namespace:System;assembly=mscorlib">1. Installed applications</sys:String>
+  <sys:String x:Key="ScanItems" xmlns:sys="clr-namespace:System;assembly=mscorlib">Scan applications and folders</sys:String>
+  <sys:String x:Key="LocalData" xmlns:sys="clr-namespace:System;assembly=mscorlib">2. Local data</sys:String>
+  <sys:String x:Key="CreateBackup" xmlns:sys="clr-namespace:System;assembly=mscorlib">Create backup file (.ZNEY)</sys:String>
+  <sys:String x:Key="ChooseBackup" xmlns:sys="clr-namespace:System;assembly=mscorlib">Choose backup file (.zney)</sys:String>
+  <sys:String x:Key="NoBackupSelected" xmlns:sys="clr-namespace:System;assembly=mscorlib">No .zney file selected</sys:String>
+  <sys:String x:Key="RestoreApps" xmlns:sys="clr-namespace:System;assembly=mscorlib">Applications and restore workflow</sys:String>
+  <sys:String x:Key="RestoreData" xmlns:sys="clr-namespace:System;assembly=mscorlib">SHA-256 sealed local data</sys:String>
+  <sys:String x:Key="RestoreSelected" xmlns:sys="clr-namespace:System;assembly=mscorlib">Restore selected items</sys:String>
+  <sys:String x:Key="StatusLog" xmlns:sys="clr-namespace:System;assembly=mscorlib">Status and activity log</sys:String>
+  <sys:String x:Key="Language" xmlns:sys="clr-namespace:System;assembly=mscorlib">Language</sys:String>
+</ResourceDictionary>
