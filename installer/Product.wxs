@@ -1,7 +1,7 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <Package Name="Zney Backup &amp; Restore"
            Manufacturer="Zney"
-           Version="1.0.8"
+           Version="1.0.9"
            UpgradeCode="F456BC6D-68EC-462A-92DB-F9CBFD9044B4"
            Language="1033"
            Scope="perMachine">
@@ -47,23 +47,10 @@
       </Directory>
     </StandardDirectory>
 
-    <!-- The uninstaller only clears this application's cache. Backup files and third-party data are never targeted. -->
-    <StandardDirectory Id="LocalAppDataFolder">
-      <Directory Id="ZNEY_CACHE" Name="ZneyBackup">
-        <Component Id="ZneyCacheDirectory" Guid="3D2D0314-D3DB-4767-82E7-98C4523AC002">
-          <CreateFolder />
-          <RemoveFile Id="RemoveZneyCacheFiles" Name="*" On="uninstall" />
-          <RemoveFolder Id="RemoveZneyCacheDirectory" On="uninstall" />
-          <RegistryValue Root="HKLM" Key="Software\ZneyBackup" Name="CacheDirectory" Type="integer" Value="1" KeyPath="yes" />
-        </Component>
-      </Directory>
-    </StandardDirectory>
-
     <Feature Id="MainFeature" Title="Zney Backup &amp; Restore" Level="1">
       <ComponentRef Id="ApplicationFiles" />
       <ComponentRef Id="DesktopShortcut" />
       <ComponentRef Id="StartMenuShortcut" />
-      <ComponentRef Id="ZneyCacheDirectory" />
     </Feature>
 
     <CustomAction Id="LaunchApplication"

@@ -11,7 +11,7 @@ Zney creates and reads `.zney` files only. It never runs scripts from a backup p
 
 Download `ZneyBackup.msi` from [GitHub Releases](https://github.com/psy-zney/BackupData/releases/latest) and install it. Zney Backup & Restore opens when installation finishes. Desktop and Start menu shortcuts are also created for later use.
 
-Uninstalling removes only Zney's internal cache at `%LOCALAPPDATA%\ZneyBackup`. It never removes `.zney` backups, Documents, Photos, Videos, Steam data, or third-party application data.
+Uninstalling removes the application files and its shortcuts. Zney does not maintain a persistent scan cache, and uninstall never removes `.zney` backups, Documents, Photos, Videos, Steam data, or third-party application data.
 
 ## Visual Studio 2022 debugging
 
@@ -75,8 +75,8 @@ Close Chrome, Edge, VS Code, and related applications before exporting their pro
 
 1. Choose **Import — Select a .zney file to restore**.
 2. Select a `.zney` package created by Zney.
-3. Review every application and data group; clear any item you do not want to restore.
-4. Confirm the overwrite warning, then start import. Files are verified with SHA-256 before they can overwrite local files; missing or duplicate archive entries are reported instead of being silently ignored.
+3. Imported items start unchecked. Review the target paths and explicitly select only the applications and data groups you want to restore.
+4. Confirm the overwrite warning, then start import. Zney stages and verifies the complete selected data group with SHA-256 before it overwrites local files; missing or duplicate archive entries are rejected.
 
 ## Data groups
 
@@ -116,7 +116,7 @@ archives/
   Personal_photos.zip
 ```
 
-Zney blocks Zip Slip paths, rejects duplicate entries, detects files declared in the manifest but absent from the archive, enforces an extraction-size limit, and restores only to permitted user-data locations. Open `.zney` files only from sources you trust.
+Zney blocks Zip Slip paths, rejects duplicate entries and malformed manifests, detects files declared in the manifest but absent from the archive, enforces entry-count and extraction-size limits, and restores only to permitted user-data locations. Large nested archives are streamed through a temporary disk file instead of being held in RAM. Open `.zney` files only from sources you trust.
 
 ## Validation and releases
 
