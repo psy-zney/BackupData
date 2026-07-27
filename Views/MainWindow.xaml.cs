@@ -23,6 +23,8 @@ namespace BackupUtility.Views
 
         private string _loadedBackupFilePath = string.Empty;
         private CancellationTokenSource? _scanCancellation;
+        private bool _isBackupRunning;
+        private bool _isRestoreRunning;
 
         public MainWindow()
         {
@@ -191,6 +193,7 @@ namespace BackupUtility.Views
 
         private async void BtnCreateBackup_Click(object sender, RoutedEventArgs e)
         {
+            if (_isBackupRunning) return;
             var selectedApps = BackupApps.Where(a => a.IsSelected).ToList();
             var selectedFolders = BackupDataFolders.Where(d => d.IsSelected).ToList();
 
@@ -211,6 +214,10 @@ namespace BackupUtility.Views
 
             if (dialog.ShowDialog() == true)
             {
+                _isBackupRunning = true;
+                BtnCreateBackup.IsEnabled = false;
+                try
+                {
                 Log($"Bắt đầu xuất backup ra file: {dialog.FileName}");
                 bool success = await BackupRestoreService.CreateBackupPackageAsync(
                     dialog.FileName,
@@ -221,6 +228,12 @@ namespace BackupUtility.Views
                 if (success)
                 {
                     MessageBox.Show("Sao lưu hoàn tất thành công!", "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                }
+                finally
+                {
+                    _isBackupRunning = false;
+                    BtnCreateBackup.IsEnabled = true;
                 }
             }
         }
@@ -249,6 +262,9 @@ namespace BackupUtility.Views
                 var manifest = await BackupRestoreService.ReadManifestFromPackageAsync(_loadedBackupFilePath);
                 if (manifest == null)
                 {
+                    _loadedBackupFilePath = string.Empty;
+                    RestoreApps.Clear();
+                    RestoreDataFolders.Clear();
                     MessageBox.Show("File backup không hợp lệ hoặc bị lỗi!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
@@ -271,6 +287,7 @@ namespace BackupUtility.Views
 
         private async void BtnStartRestore_Click(object sender, RoutedEventArgs e)
         {
+            if (_isRestoreRunning) return;
             if (string.IsNullOrEmpty(_loadedBackupFilePath) || !File.Exists(_loadedBackupFilePath))
             {
                 MessageBox.Show("Vui lòng chọn file backup hợp lệ trước!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -287,6 +304,17 @@ namespace BackupUtility.Views
             }
 
             Log("=== BẮT ĐẦU TIẾN TRÌNH PHỤC HỒI ===");
+            var confirmation = MessageBox.Show(
+                "Restoring can overwrite existing selected files. Continue only if this backup is trusted.",
+                "Confirm restore",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (confirmation != MessageBoxResult.Yes) return;
+
+            _isRestoreRunning = true;
+            BtnRestoreSelected.IsEnabled = false;
+            try
+            {
             var restoreErrors = new List<string>();
             var restoredFiles = 0;
 
@@ -328,6 +356,17 @@ namespace BackupUtility.Views
 
             Log("=== HOÀN TẤT PHỤC HỒI ===");
             MessageBox.Show("Tiến trình phục hồi hoàn tất!", "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                Log($"Restore failed safely: {ex.Message}");
+                MessageBox.Show("Restore could not complete. Review the log before trying again.", "Restore warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            finally
+            {
+                _isRestoreRunning = false;
+                BtnRestoreSelected.IsEnabled = true;
+            }
         }
     }
 }

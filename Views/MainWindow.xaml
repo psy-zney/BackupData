@@ -91,7 +91,7 @@
                     </GroupBox>
                     <GroupBox Grid.Column="1" Header="{DynamicResource LocalData}" Foreground="#007ACC" Margin="5" BorderBrush="#333333">
                         <DockPanel>
-                            <Button DockPanel.Dock="Bottom" Content="{DynamicResource CreateBackup}" Click="BtnCreateBackup_Click" Background="#28A745" Height="40" FontSize="15"/>
+                            <Button x:Name="BtnCreateBackup" DockPanel.Dock="Bottom" Content="{DynamicResource CreateBackup}" Click="BtnCreateBackup_Click" Background="#28A745" Height="40" FontSize="15"/>
                             <ListView x:Name="LvBackupData" Background="#252526" Foreground="White" BorderThickness="0">
                                 <ListView.ItemTemplate>
                                     <DataTemplate>
@@ -142,7 +142,7 @@
                         </GroupBox>
                         <GroupBox Grid.Column="1" Header="{DynamicResource RestoreData}" Foreground="#28A745" Margin="5" BorderBrush="#333333">
                             <DockPanel>
-                                <Button DockPanel.Dock="Bottom" Content="{DynamicResource RestoreSelected}" Click="BtnStartRestore_Click" Background="#28A745" Height="40" FontSize="15"/>
+                                <Button x:Name="BtnRestoreSelected" DockPanel.Dock="Bottom" Content="{DynamicResource RestoreSelected}" Click="BtnStartRestore_Click" Background="#28A745" Height="40" FontSize="15"/>
                                 <ListView x:Name="LvRestoreData" Background="#252526" Foreground="White" BorderThickness="0">
                                     <ListView.ItemTemplate>
                                         <DataTemplate>
