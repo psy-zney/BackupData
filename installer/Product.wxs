@@ -1,5 +1,4 @@
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
-     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <Package Name="Zney Backup &amp; Restore"
            Manufacturer="Zney"
            Version="1.0.0"
@@ -67,20 +66,14 @@
       <ComponentRef Id="ZneyCacheDirectory" />
     </Feature>
 
-    <ui:WixUI Id="WixUI_Minimal" />
-    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Launch Zney Backup &amp; Restore" />
-    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
-    <Property Id="WixUnelevatedShellExecTarget" Value="[#BackupUtilityExe]" />
     <CustomAction Id="LaunchApplication"
-                  BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)"
-                  DllEntry="WixUnelevatedShellExec"
+                  FileRef="BackupUtilityExe"
+                  ExeCommand=""
                   Execute="immediate"
-                  Return="check" />
-    <UI>
-      <Publish Dialog="ExitDialog"
-               Control="Finish"
-               Event="DoAction"
-               Value="LaunchApplication">WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed</Publish>
-    </UI>
+                  Return="asyncNoWait"
+                  Impersonate="yes" />
+    <InstallExecuteSequence>
+      <Custom Action="LaunchApplication" After="InstallFinalize" Condition="NOT Installed" />
+    </InstallExecuteSequence>
   </Package>
 </Wix>

@@ -9,7 +9,7 @@ Zney creates and reads `.zney` files only. It never runs scripts from a backup p
 
 ## Download and install
 
-Download `ZneyBackup.msi` from [GitHub Releases](https://github.com/psy-zney/BackupData/releases/latest), install it, then select **Finish**. The preselected **Launch Zney Backup & Restore** option opens the app immediately. Desktop and Start menu shortcuts are also created for later use.
+Download `ZneyBackup.msi` from [GitHub Releases](https://github.com/psy-zney/BackupData/releases/latest) and install it. Zney Backup & Restore opens when installation finishes. Desktop and Start menu shortcuts are also created for later use.
 
 Uninstalling removes only Zney's internal cache at `%LOCALAPPDATA%\ZneyBackup`. It never removes `.zney` backups, Documents, Photos, Videos, Steam data, or third-party application data.
 
