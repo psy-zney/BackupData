@@ -49,7 +49,8 @@ flowchart TD
     PickFile --> Validate[Validate extension, manifest and safe paths]
     Validate --> ImportList[Show application, settings and data checklists]
     ImportList --> ImportChoice[Select items to restore]
-    ImportChoice --> AppFlow{Application workflow}
+    ImportChoice --> Confirm[Confirm overwrite of selected local files]
+    Confirm --> AppFlow{Application workflow}
     AppFlow -->|Winget| Install[Install through winget]
     AppFlow -->|Steam| Steam[Install Steam and ask the user to sign in]
     AppFlow -->|Manual| Skip[Skip unknown installers]
@@ -75,7 +76,7 @@ Close Chrome, Edge, VS Code, and related applications before exporting their pro
 1. Choose **Import — Select a .zney file to restore**.
 2. Select a `.zney` package created by Zney.
 3. Review every application and data group; clear any item you do not want to restore.
-4. Start import. Files are verified with SHA-256 before they can overwrite local files.
+4. Confirm the overwrite warning, then start import. Files are verified with SHA-256 before they can overwrite local files; missing or duplicate archive entries are reported instead of being silently ignored.
 
 ## Data groups
 
@@ -115,7 +116,7 @@ archives/
   Personal_photos.zip
 ```
 
-Zney blocks Zip Slip paths, enforces an extraction-size limit, and restores only to permitted user-data locations. Open `.zney` files only from sources you trust.
+Zney blocks Zip Slip paths, rejects duplicate entries, detects files declared in the manifest but absent from the archive, enforces an extraction-size limit, and restores only to permitted user-data locations. Open `.zney` files only from sources you trust.
 
 ## Validation and releases
 
