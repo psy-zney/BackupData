@@ -377,7 +377,7 @@ namespace BackupUtility.Services
                 await destination.WriteAsync(buffer.AsMemory(0, read));
             }
             if (!Convert.ToHexString(hash.GetHashAndReset()).Equals(expectedHash, StringComparison.OrdinalIgnoreCase))
-                throw new CryptographicException("SHA-256 does not match the manifest.");
+                throw new CryptographicException("SHA256 does not match the manifest.");
         }
 
         private static async Task<TemporaryZipArchive> OpenNestedArchiveFromTemporaryFileAsync(ZipArchiveEntry entry)
