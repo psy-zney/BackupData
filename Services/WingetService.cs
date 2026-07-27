@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using BackupUtility.Models;
 
@@ -10,7 +11,7 @@ namespace BackupUtility.Services
 {
     public class WingetService
     {
-        public static async Task<bool> IsWingetAvailableAsync()
+        public static async Task<bool> IsWingetAvailableAsync(TimeSpan timeout, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -26,8 +27,16 @@ namespace BackupUtility.Services
 
                 using var proc = Process.Start(psi);
                 if (proc == null) return false;
-                await proc.WaitForExitAsync();
+                await WaitForExitAsync(proc, timeout, cancellationToken);
                 return proc.ExitCode == 0;
+            }
+            catch (TimeoutException)
+            {
+                return false;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch
             {
@@ -35,7 +44,10 @@ namespace BackupUtility.Services
             }
         }
 
-        public static async Task<List<AppItemModel>> ExportWingetPackagesAsync(string tempJsonPath)
+        public static async Task<List<AppItemModel>> ExportWingetPackagesAsync(
+            string tempJsonPath,
+            TimeSpan timeout,
+            CancellationToken cancellationToken = default)
         {
             var apps = new List<AppItemModel>();
             try
@@ -43,7 +55,7 @@ namespace BackupUtility.Services
                 var psi = new ProcessStartInfo
                 {
                     FileName = "winget",
-                    Arguments = $"export --output \"{tempJsonPath}\" --include-versions --accept-source-agreements",
+                    Arguments = $"export --output \"{tempJsonPath}\" --include-versions --accept-source-agreements --disable-interactivity",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -51,12 +63,11 @@ namespace BackupUtility.Services
                 };
 
                 using var proc = Process.Start(psi);
-                if (proc != null)
-                {
-                    await proc.WaitForExitAsync();
-                }
+                if (proc == null) return apps;
 
-                if (File.Exists(tempJsonPath))
+                await WaitForExitAsync(proc, timeout, cancellationToken);
+
+                if (proc.ExitCode == 0 && File.Exists(tempJsonPath))
                 {
                     var jsonContent = await File.ReadAllTextAsync(tempJsonPath);
                     using var doc = JsonDocument.Parse(jsonContent);
@@ -85,6 +96,14 @@ namespace BackupUtility.Services
                         }
                     }
                 }
+            }
+            catch (TimeoutException)
+            {
+                throw;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -121,7 +140,7 @@ namespace BackupUtility.Services
                 proc.BeginOutputReadLine();
                 proc.BeginErrorReadLine();
 
-                await proc.WaitForExitAsync();
+                await WaitForExitAsync(proc, TimeSpan.FromMinutes(10), CancellationToken.None, captureOutput: false);
                 return proc.ExitCode == 0;
             }
             catch (Exception ex)
@@ -129,6 +148,50 @@ namespace BackupUtility.Services
                 onLog?.Invoke($"Lỗi khi cài {packageId}: {ex.Message}");
                 return false;
             }
+        }
+
+        private static async Task WaitForExitAsync(
+            Process process,
+            TimeSpan timeout,
+            CancellationToken cancellationToken,
+            bool captureOutput = true)
+        {
+            var outputTask = captureOutput ? process.StandardOutput.ReadToEndAsync() : Task.CompletedTask;
+            var errorTask = captureOutput ? process.StandardError.ReadToEndAsync() : Task.CompletedTask;
+            var exitTask = process.WaitForExitAsync();
+
+            try
+            {
+                var completed = await Task.WhenAny(exitTask, Task.Delay(timeout, cancellationToken));
+                if (completed != exitTask)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    TryKill(process);
+                    await exitTask;
+                    throw new TimeoutException($"winget did not finish within {timeout.TotalSeconds:0} seconds.");
+                }
+
+                await exitTask;
+            }
+            catch (OperationCanceledException)
+            {
+                TryKill(process);
+                throw;
+            }
+            finally
+            {
+                await Task.WhenAll(outputTask, errorTask);
+            }
+        }
+
+        private static void TryKill(Process process)
+        {
+            try
+            {
+                if (!process.HasExited) process.Kill(entireProcessTree: true);
+            }
+            catch (InvalidOperationException) { }
+            catch (System.ComponentModel.Win32Exception) { }
         }
     }
 }
