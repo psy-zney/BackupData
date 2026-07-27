@@ -1,7 +1,7 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <Package Name="Zney Backup &amp; Restore"
            Manufacturer="Zney"
-           Version="1.0.5"
+           Version="1.0.6"
            UpgradeCode="F456BC6D-68EC-462A-92DB-F9CBFD9044B4"
            Language="1033"
            Scope="perMachine">
