@@ -119,6 +119,29 @@ public sealed class BackupRestoreServiceTests : IDisposable
         Assert.False(File.Exists(Path.Combine(_root, "escape.txt")));
     }
 
+    [Fact]
+    public async Task ReportsAFileMissingFromTheArchive()
+    {
+        var item = await CreateDataItemAsync("profile", "settings.json", "trusted");
+        var package = Path.Combine(_root, "missing-file.zney");
+        Assert.True(await BackupRestoreService.CreateBackupPackageAsync(package, [], [item]));
+        var manifest = (await BackupRestoreService.ReadManifestFromPackageAsync(package))!;
+
+        using (var archive = ZipFile.Open(package, ZipArchiveMode.Update))
+        {
+            var nestedEntry = archive.GetEntry("archives/profile.zip")!;
+            nestedEntry.Delete();
+            var replacement = archive.CreateEntry("archives/profile.zip", CompressionLevel.NoCompression);
+            await using var replacementStream = replacement.Open();
+            using var emptyArchive = new ZipArchive(replacementStream, ZipArchiveMode.Create, leaveOpen: false);
+        }
+
+        var result = await BackupRestoreService.RestoreSelectedDataAsync(package, manifest.DataFolders);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Errors, error => error.Contains("Missing declared file", StringComparison.Ordinal));
+    }
+
     private async Task<DataFolderItemModel> CreateDataItemAsync(string archivePath, string fileName, string contents)
     {
         var directory = Path.Combine(_root, archivePath);

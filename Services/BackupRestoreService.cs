@@ -74,27 +74,41 @@ namespace BackupUtility.Services
                                     IgnoreInaccessible = true,
                                     AttributesToSkip = FileAttributes.ReparsePoint
                                 };
-                                foreach (var filePath in Directory.EnumerateFiles(sourcePath, "*", enumerationOptions))
+                                try
                                 {
-                                    try
+                                    foreach (var filePath in Directory.EnumerateFiles(sourcePath, "*", enumerationOptions))
                                     {
-                                        var relativePath = NormalizeRelativePath(Path.GetRelativePath(sourcePath, filePath));
-                                        var writeResult = await WriteFileEntryAndHashAsync(dataArchive, filePath, relativePath);
-                                        item.FileHashes[relativePath] = writeResult.Hash;
-                                        item.SizeBytes += writeResult.SizeBytes;
+                                        try
+                                        {
+                                            var relativePath = NormalizeRelativePath(Path.GetRelativePath(sourcePath, filePath));
+                                            var writeResult = await WriteFileEntryAndHashAsync(dataArchive, filePath, relativePath);
+                                            item.FileHashes[relativePath] = writeResult.Hash;
+                                            item.SizeBytes += writeResult.SizeBytes;
+                                        }
+                                        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                                        {
+                                            onProgress?.Invoke($"Skipped {filePath}: {ex.Message}");
+                                        }
                                     }
-                                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                                    {
-                                        onProgress?.Invoke($"Skipped {filePath}: {ex.Message}");
-                                    }
+                                }
+                                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                                {
+                                    onProgress?.Invoke($"Could not finish enumerating {item.Name}; files already read were retained: {ex.Message}");
                                 }
                             }
                             else
                             {
-                                var relativePath = Path.GetFileName(sourcePath);
-                                var writeResult = await WriteFileEntryAndHashAsync(dataArchive, sourcePath, relativePath);
-                                item.FileHashes[relativePath] = writeResult.Hash;
-                                item.SizeBytes = writeResult.SizeBytes;
+                                try
+                                {
+                                    var relativePath = Path.GetFileName(sourcePath);
+                                    var writeResult = await WriteFileEntryAndHashAsync(dataArchive, sourcePath, relativePath);
+                                    item.FileHashes[relativePath] = writeResult.Hash;
+                                    item.SizeBytes = writeResult.SizeBytes;
+                                }
+                                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                                {
+                                    onProgress?.Invoke($"Skipped {item.Name}: {ex.Message}");
+                                }
                             }
                         }
                         item.FileHash = ComputeAggregateHash(item.FileHashes);
@@ -118,7 +132,7 @@ namespace BackupUtility.Services
             }
             finally
             {
-                if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+                TryDeleteFile(temporaryPath);
             }
         }
 
@@ -134,7 +148,7 @@ namespace BackupUtility.Services
                 var manifest = await JsonSerializer.DeserializeAsync<BackupManifest>(stream);
                 return manifest is not null && IsValidManifest(manifest) ? manifest : null;
             }
-            catch (Exception ex) when (ex is IOException or InvalidDataException or JsonException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException)
             {
                 return null;
             }
@@ -187,12 +201,23 @@ namespace BackupUtility.Services
                     onProgress?.Invoke($"Đang khôi phục nhóm {item.Category}: {item.Name}...");
                     await using var outerStream = archiveEntry.Open();
                     using var dataArchive = new ZipArchive(outerStream, ZipArchiveMode.Read);
-                    foreach (var entry in dataArchive.Entries.Where(entry => !string.IsNullOrEmpty(entry.Name)))
+                    var fileEntries = dataArchive.Entries.Where(entry => !string.IsNullOrEmpty(entry.Name)).ToList();
+                    foreach (var missingPath in item.FileHashes.Keys.Where(path => !fileEntries.Any(entry => NormalizeRelativePath(entry.FullName).Equals(path, StringComparison.Ordinal))))
+                    {
+                        result.Errors.Add($"Missing declared file in {item.Name}: {missingPath}");
+                    }
+                    var archivePaths = new HashSet<string>(StringComparer.Ordinal);
+                    foreach (var entry in fileEntries)
                     {
                         var relativePath = NormalizeRelativePath(entry.FullName);
                         if (!IsSafeRelativePath(relativePath) || !item.FileHashes.TryGetValue(relativePath, out var expectedHash))
                         {
                             result.Errors.Add($"Bỏ qua tệp không hợp lệ trong {item.Name}: {entry.FullName}");
+                            continue;
+                        }
+                        if (!archivePaths.Add(relativePath))
+                        {
+                            result.Errors.Add($"Skipped duplicate file in {item.Name}: {entry.FullName}");
                             continue;
                         }
                         totalBytes += entry.Length;
@@ -219,7 +244,7 @@ namespace BackupUtility.Services
                         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or CryptographicException)
                         {
                             result.Errors.Add($"Không thể khôi phục {entry.FullName}: {ex.Message}");
-                            if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+                            TryDeleteFile(temporaryPath);
                         }
                     }
                 }
@@ -242,7 +267,7 @@ namespace BackupUtility.Services
                 return;
             }
             var entry = package.GetEntry(item.SettingsEntryName);
-            if (entry is null)
+            if (entry is null || entry.Length > 1024 * 1024)
             {
                 result.Errors.Add("Thiếu file cài đặt Windows trong backup.");
                 return;
@@ -364,10 +389,16 @@ namespace BackupUtility.Services
         private static bool IsSafeArchiveEntryName(string value) => value.StartsWith("archives/", StringComparison.OrdinalIgnoreCase) && value.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) && IsSafeArchiveSegment(Path.GetFileNameWithoutExtension(value));
         private static bool IsSafeRelativePath(string value) => !string.IsNullOrWhiteSpace(value) && !Path.IsPathRooted(value) && !value.Split('/', '\\').Any(part => part is "." or "..");
         private static string NormalizeRelativePath(string path) => path.Replace('\\', '/');
-        private static string ComputeFileSha256(string filePath)
+        private static void TryDeleteFile(string path)
         {
-            using var stream = File.OpenRead(filePath);
-            return Convert.ToHexString(SHA256.HashData(stream));
+            try
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+            catch (Exception)
+            {
+                // A leftover temporary file is harmless; never turn cleanup into an app failure.
+            }
         }
         private static string ComputeAggregateHash(IReadOnlyDictionary<string, string> hashes) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("\n", hashes.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}:{pair.Value}")))));
         private static AppItemModel CloneApp(AppItemModel app) => new() { Name = app.Name, PackageId = app.PackageId, Version = app.Version, Publisher = app.Publisher, Source = app.Source, RestoreWorkflow = app.RestoreWorkflow, RequiresInteractiveLogin = app.RequiresInteractiveLogin, RestoreInstructions = app.RestoreInstructions, IsSelected = app.IsSelected };
