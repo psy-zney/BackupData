@@ -1,0 +1,52 @@
+name: Build Zney MSI
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build-msi:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout a clean source tree
+        uses: actions/checkout@v4
+        with:
+          clean: true
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore application dependencies and Windows runtime pack
+        run: dotnet restore BackupUtility.csproj -r win-x64
+
+      - name: Restore test dependencies
+        run: dotnet restore .\BackupUtility.Tests\BackupUtility.Tests.csproj
+
+      - name: Run automated tests
+        run: dotnet test .\BackupUtility.Tests\BackupUtility.Tests.csproj -c Release --no-restore
+
+      - name: Publish self-contained Windows application
+        run: dotnet publish BackupUtility.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:PublishTrimmed=false --no-restore -o .\publish
+
+      - name: Install WiX Toolset
+        run: dotnet tool install --global wix --version 4.0.5
+
+      - name: Build MSI
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path .\artifacts | Out-Null
+          wix build .\installer\Product.wxs -arch x64 -d PublishDir="$env:GITHUB_WORKSPACE\publish" -o .\artifacts\ZneyBackup.msi
+
+      - name: Upload MSI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZneyBackup-msi
+          path: artifacts\ZneyBackup.msi
+          if-no-files-found: error

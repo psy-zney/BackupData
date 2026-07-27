@@ -1,0 +1,43 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="Zney Backup &amp; Restore"
+           Manufacturer="Zney"
+           Version="1.0.0"
+           UpgradeCode="F456BC6D-68EC-462A-92DB-F9CBFD9044B4"
+           Language="1033"
+           Scope="perMachine">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Zney Backup &amp; Restore is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="INSTALLFOLDER" Name="Zney Backup">
+        <Component Id="ApplicationFiles" Guid="3D2D0314-D3DB-4767-82E7-98C4523AC001" Bitness="always64">
+          <File Id="BackupUtilityExe" Source="$(var.PublishDir)\BackupUtility.exe" KeyPath="yes" />
+          <File Id="D3DCompiler" Source="$(var.PublishDir)\D3DCompiler_47_cor3.dll" />
+          <File Id="PenImc" Source="$(var.PublishDir)\PenImc_cor3.dll" />
+          <File Id="PresentationNative" Source="$(var.PublishDir)\PresentationNative_cor3.dll" />
+          <File Id="VCRuntime" Source="$(var.PublishDir)\vcruntime140_cor3.dll" />
+          <File Id="Wpfgfx" Source="$(var.PublishDir)\wpfgfx_cor3.dll" />
+          <File Id="BackupUtilityPdb" Source="$(var.PublishDir)\BackupUtility.pdb" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <!-- The uninstaller only clears this application's cache. Backup files and third-party data are never targeted. -->
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="ZNEY_CACHE" Name="ZneyBackup">
+        <Component Id="ZneyCacheDirectory" Guid="3D2D0314-D3DB-4767-82E7-98C4523AC002">
+          <CreateFolder />
+          <RemoveFile Id="RemoveZneyCacheFiles" Name="*" On="uninstall" />
+          <RemoveFolder Id="RemoveZneyCacheDirectory" On="uninstall" />
+          <RegistryValue Root="HKCU" Key="Software\ZneyBackup" Name="CacheDirectory" Type="integer" Value="1" KeyPath="yes" />
+          <RemoveRegistryValue Root="HKCU" Key="Software\ZneyBackup" Name="CacheDirectory" On="uninstall" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="MainFeature" Title="Zney Backup &amp; Restore" Level="1">
+      <ComponentRef Id="ApplicationFiles" />
+      <ComponentRef Id="ZneyCacheDirectory" />
+    </Feature>
+  </Package>
+</Wix>
