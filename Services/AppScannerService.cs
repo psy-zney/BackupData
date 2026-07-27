@@ -245,7 +245,7 @@ public static class AppScannerService
         var examined = 0;
         foreach (var root in roots)
         {
-            foreach (var shortcutPath in EnumerateShortcutFiles(root, cancellationToken))
+            foreach (var shortcutPath in EnumerateShortcutFiles(root, maximumShortcuts - examined, cancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (examined++ >= maximumShortcuts) return apps;
@@ -269,24 +269,21 @@ public static class AppScannerService
         return apps;
     }
 
-    private static IEnumerable<string> EnumerateShortcutFiles(string root, CancellationToken cancellationToken)
+    private static IReadOnlyList<string> EnumerateShortcutFiles(string root, int maximumFiles, CancellationToken cancellationToken)
     {
-        IEnumerator<string>? shortcuts = null;
+        var shortcuts = new List<string>();
         try
         {
-            shortcuts = Directory.EnumerateFiles(root, "*.lnk", SearchOption.AllDirectories).GetEnumerator();
-            while (shortcuts.MoveNext())
+            foreach (var shortcut in Directory.EnumerateFiles(root, "*.lnk", SearchOption.AllDirectories))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                yield return shortcuts.Current;
+                if (shortcuts.Count >= maximumFiles) break;
+                shortcuts.Add(shortcut);
             }
         }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
-        finally
-        {
-            shortcuts?.Dispose();
-        }
+        return shortcuts;
     }
 
     private static string TryResolveShortcutTarget(string shortcutPath)
