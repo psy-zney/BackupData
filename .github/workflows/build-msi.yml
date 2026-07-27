@@ -44,7 +44,9 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path .\artifacts | Out-Null
-          wix build .\installer\Product.wxs -arch x64 -d PublishDir="$env:GITHUB_WORKSPACE\publish" -o .\artifacts\ZneyBackup.msi
+          wix extension add -g WixToolset.UI.wixext/4.0.5
+          wix extension add -g WixToolset.Util.wixext/4.0.5
+          wix build .\installer\Product.wxs -arch x64 -ext WixToolset.UI.wixext/4.0.5 -ext WixToolset.Util.wixext/4.0.5 -d PublishDir="$env:GITHUB_WORKSPACE\publish" -o .\artifacts\ZneyBackup.msi
 
       - name: Upload MSI artifact
         uses: actions/upload-artifact@v4

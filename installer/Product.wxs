@@ -1,4 +1,5 @@
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
   <Package Name="Zney Backup &amp; Restore"
            Manufacturer="Zney"
            Version="1.0.0"
@@ -22,6 +23,31 @@
       </Directory>
     </StandardDirectory>
 
+    <StandardDirectory Id="DesktopFolder">
+      <Component Id="DesktopShortcut" Guid="3D2D0314-D3DB-4767-82E7-98C4523AC003">
+        <Shortcut Id="DesktopShortcutLink"
+                  Name="Zney Backup &amp; Restore"
+                  Description="Back up and restore Zney data packages"
+                  Target="[#BackupUtilityExe]"
+                  WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue Root="HKCU" Key="Software\ZneyBackup" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ZNEY_PROGRAMS" Name="Zney Backup &amp; Restore">
+        <Component Id="StartMenuShortcut" Guid="3D2D0314-D3DB-4767-82E7-98C4523AC004">
+          <Shortcut Id="StartMenuShortcutLink"
+                    Name="Zney Backup &amp; Restore"
+                    Description="Back up and restore Zney data packages"
+                    Target="[#BackupUtilityExe]"
+                    WorkingDirectory="INSTALLFOLDER" />
+          <RemoveFolder Id="RemoveZneyProgramsFolder" On="uninstall" />
+          <RegistryValue Root="HKCU" Key="Software\ZneyBackup" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
     <!-- The uninstaller only clears this application's cache. Backup files and third-party data are never targeted. -->
     <StandardDirectory Id="LocalAppDataFolder">
       <Directory Id="ZNEY_CACHE" Name="ZneyBackup">
@@ -36,7 +62,25 @@
 
     <Feature Id="MainFeature" Title="Zney Backup &amp; Restore" Level="1">
       <ComponentRef Id="ApplicationFiles" />
+      <ComponentRef Id="DesktopShortcut" />
+      <ComponentRef Id="StartMenuShortcut" />
       <ComponentRef Id="ZneyCacheDirectory" />
     </Feature>
+
+    <ui:WixUI Id="WixUI_Minimal" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Launch Zney Backup &amp; Restore" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <Property Id="WixUnelevatedShellExecTarget" Value="[#BackupUtilityExe]" />
+    <CustomAction Id="LaunchApplication"
+                  BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)"
+                  DllEntry="WixUnelevatedShellExec"
+                  Execute="immediate"
+                  Return="check" />
+    <UI>
+      <Publish Dialog="ExitDialog"
+               Control="Finish"
+               Event="DoAction"
+               Value="LaunchApplication">WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed</Publish>
+    </UI>
   </Package>
 </Wix>
