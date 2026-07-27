@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using BackupUtility.Models;
@@ -17,11 +19,20 @@ public static class AppScannerService
         IProgress<ScanProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        progress?.Report(new ScanProgress(5, "Reading Desktop and Start Menu shortcuts..."));
+        var shortcutApps = await ScanShortcutAppsAsync(cancellationToken);
+        progress?.Report(new ScanProgress(15, $"Found {shortcutApps.Count} application shortcuts."));
+
         var registryApps = await ScanRegistryInstalledAppsAsync(cancellationToken);
-        progress?.Report(new ScanProgress(20, $"Found {registryApps.Count} applications in Windows Registry."));
+        progress?.Report(new ScanProgress(25, $"Found {registryApps.Count} applications in Windows Registry."));
 
         var wingetApps = await ScanWingetPackagesAsync(progress, cancellationToken);
-        return PrepareApps(registryApps.Concat(wingetApps));
+        return PrepareApps(shortcutApps.Concat(registryApps).Concat(wingetApps));
+    }
+
+    public static Task<List<AppItemModel>> ScanShortcutAppsAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.Run(() => PrepareApps(GetShortcutApps(cancellationToken)), cancellationToken);
     }
 
     public static Task<List<AppItemModel>> ScanRegistryInstalledAppsAsync(CancellationToken cancellationToken = default)
@@ -77,7 +88,7 @@ public static class AppScannerService
         return list
             .GroupBy(GetAppIdentity, StringComparer.OrdinalIgnoreCase)
             .Select(group => group
-                .OrderByDescending(app => app.Source.Equals("winget", StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(app => GetSourcePriority(app.Source))
                 .First())
             .OrderBy(app => app.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -152,9 +163,10 @@ public static class AppScannerService
         var apps = new List<AppItemModel>();
         var locations = new[]
         {
-            (RegistryHive.LocalMachine, RegistryView.Registry64),
+            (RegistryHive.CurrentUser, RegistryView.Default),
+            // x86 applications are common on 64-bit Windows, so read this view before x64.
             (RegistryHive.LocalMachine, RegistryView.Registry32),
-            (RegistryHive.CurrentUser, RegistryView.Default)
+            (RegistryHive.LocalMachine, RegistryView.Registry64),
         };
 
         foreach (var (hive, view) in locations)
@@ -206,6 +218,112 @@ public static class AppScannerService
         if (app.Source.Equals("winget", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(app.PackageId))
             return $"winget:{app.PackageId}";
         return $"name:{app.Name}";
+    }
+
+    private static int GetSourcePriority(string source)
+    {
+        if (source.Equals("winget", StringComparison.OrdinalIgnoreCase)) return 3;
+        if (source.Equals("Registry", StringComparison.OrdinalIgnoreCase)) return 2;
+        if (source.Equals("Shortcut", StringComparison.OrdinalIgnoreCase)) return 1;
+        return 0;
+    }
+
+    private static List<AppItemModel> GetShortcutApps(CancellationToken cancellationToken)
+    {
+        var apps = new List<AppItemModel>();
+        var roots = new[]
+        {
+            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory),
+            Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu)
+        }
+        .Where(path => !string.IsNullOrWhiteSpace(path) && Directory.Exists(path))
+        .Distinct(StringComparer.OrdinalIgnoreCase);
+
+        const int maximumShortcuts = 1500;
+        var examined = 0;
+        foreach (var root in roots)
+        {
+            foreach (var shortcutPath in EnumerateShortcutFiles(root, cancellationToken))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (examined++ >= maximumShortcuts) return apps;
+
+                var targetPath = TryResolveShortcutTarget(shortcutPath);
+                if (!targetPath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) || !File.Exists(targetPath)) continue;
+
+                apps.Add(new AppItemModel
+                {
+                    Name = Path.GetFileNameWithoutExtension(shortcutPath),
+                    PackageId = targetPath,
+                    Publisher = Path.GetDirectoryName(targetPath) ?? string.Empty,
+                    Source = "Shortcut",
+                    IsSelected = false,
+                    RestoreWorkflow = "Manual",
+                    RestoreInstructions = "Detected from a Windows shortcut; no unattended installer ID is assumed."
+                });
+            }
+        }
+
+        return apps;
+    }
+
+    private static IEnumerable<string> EnumerateShortcutFiles(string root, CancellationToken cancellationToken)
+    {
+        IEnumerator<string>? shortcuts = null;
+        try
+        {
+            shortcuts = Directory.EnumerateFiles(root, "*.lnk", SearchOption.AllDirectories).GetEnumerator();
+            while (shortcuts.MoveNext())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                yield return shortcuts.Current;
+            }
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+        finally
+        {
+            shortcuts?.Dispose();
+        }
+    }
+
+    private static string TryResolveShortcutTarget(string shortcutPath)
+    {
+        object? shell = null;
+        object? shortcut = null;
+        try
+        {
+            var shellType = Type.GetTypeFromProgID("WScript.Shell");
+            if (shellType is null) return string.Empty;
+
+            shell = Activator.CreateInstance(shellType);
+            shortcut = shellType.InvokeMember(
+                "CreateShortcut",
+                BindingFlags.InvokeMethod,
+                binder: null,
+                target: shell,
+                args: [shortcutPath]);
+            return shortcut?.GetType().InvokeMember(
+                "TargetPath",
+                BindingFlags.GetProperty,
+                binder: null,
+                target: shortcut,
+                args: null)?.ToString() ?? string.Empty;
+        }
+        catch (COMException) { return string.Empty; }
+        catch (TargetInvocationException) { return string.Empty; }
+        finally
+        {
+            ReleaseComObject(shortcut);
+            ReleaseComObject(shell);
+        }
+    }
+
+    private static void ReleaseComObject(object? value)
+    {
+        if (value is not null && Marshal.IsComObject(value)) Marshal.FinalReleaseComObject(value);
     }
 
     private static void ApplyRestoreWorkflows(IEnumerable<AppItemModel> apps)

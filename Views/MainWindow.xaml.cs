@@ -84,7 +84,7 @@ namespace BackupUtility.Views
 
             using var cancellation = new CancellationTokenSource();
             _scanCancellation = cancellation;
-            SetScanningState(true, "Starting fast Registry scan...");
+            SetScanningState(true, "Reading Desktop and Start Menu shortcuts...");
 
             var progress = new Progress<ScanProgress>(update =>
             {
@@ -95,21 +95,24 @@ namespace BackupUtility.Views
 
             try
             {
-                Log("Scanning installed applications and selected data folders...");
-                var registryApps = await AppScannerService.ScanRegistryInstalledAppsAsync(cancellation.Token);
+                Log("Scanning shortcuts, installed applications and selected data folders...");
+                var shortcutApps = await AppScannerService.ScanShortcutAppsAsync(cancellation.Token);
 
                 BackupApps.Clear();
-                foreach (var app in registryApps)
+                foreach (var app in shortcutApps)
                 {
                     BackupApps.Add(app);
                 }
-                Log($"Registry scan is ready: {registryApps.Count} applications found. Checking optional winget data in the background...");
+                Log($"Shortcut scan is ready: {shortcutApps.Count} applications found. Scanning user, x86 and x64 Registry entries in the background...");
 
+                var registryAppsTask = AppScannerService.ScanRegistryInstalledAppsAsync(cancellation.Token);
                 var dataFoldersTask = AppScannerService.GetSuggestedDataFoldersAsync(progress, cancellation.Token);
                 var wingetAppsTask = AppScannerService.ScanWingetPackagesAsync(progress, cancellation.Token);
-                await Task.WhenAll(dataFoldersTask, wingetAppsTask);
+                await Task.WhenAll(registryAppsTask, dataFoldersTask, wingetAppsTask);
 
-                var scannedApps = AppScannerService.PrepareApps(registryApps.Concat(await wingetAppsTask));
+                var scannedApps = AppScannerService.PrepareApps(shortcutApps
+                    .Concat(await registryAppsTask)
+                    .Concat(await wingetAppsTask));
                 BackupApps.Clear();
                 foreach (var app in scannedApps)
                 {

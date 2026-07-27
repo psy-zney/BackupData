@@ -17,6 +17,15 @@ Uninstalling removes only Zney's internal cache at `%LOCALAPPDATA%\ZneyBackup`. 
 
 Open `BackupUtility.sln`, select **BackupUtility** as the Startup Project, choose the **Debug** configuration, then press `F5`. The included launch profile uses the WPF project directly. Administrator mode is not required for the Registry-first scan; protected keys are skipped safely.
 
+## Scan order and responsiveness
+
+The export scan is intentionally bounded and does not enumerate the entire disk:
+
+- Desktop and Start Menu shortcuts are read first.
+- Installed apps are then read from the current-user Registry, 32-bit (x86) uninstall view, and 64-bit uninstall view.
+- `winget` is optional, runs in the background, and is stopped after 35 seconds if it does not finish.
+- Folder-size calculation uses two background workers, skips inaccessible paths and reparse points, and reports progress in the app.
+
 ## Language
 
 The application starts in **English**. Use the language selector in the top-right corner to switch to **Tiếng Việt** without restarting the application. The main navigation, buttons, labels, and workflow screen update immediately.
