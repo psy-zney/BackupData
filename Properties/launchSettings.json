@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "Zney Backup & Restore": {
+      "commandName": "Project"
+    }
+  }
+}

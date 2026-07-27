@@ -3,5 +3,6 @@ obj/
 dist/
 publish/
 artifacts/
+.vs/
 BackupUtility.Tests/bin/
 BackupUtility.Tests/obj/

@@ -13,6 +13,10 @@ Download `ZneyBackup.msi` from [GitHub Releases](https://github.com/psy-zney/Bac
 
 Uninstalling removes only Zney's internal cache at `%LOCALAPPDATA%\ZneyBackup`. It never removes `.zney` backups, Documents, Photos, Videos, Steam data, or third-party application data.
 
+## Visual Studio 2022 debugging
+
+Open `BackupUtility.sln`, select **BackupUtility** as the Startup Project, choose the **Debug** configuration, then press `F5`. The included launch profile uses the WPF project directly. Administrator mode is not required for the Registry-first scan; protected keys are skipped safely.
+
 ## Language
 
 The application starts in **English**. Use the language selector in the top-right corner to switch to **Tiếng Việt** without restarting the application. The main navigation, buttons, labels, and workflow screen update immediately.

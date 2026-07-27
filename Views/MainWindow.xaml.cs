@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -21,6 +22,7 @@ namespace BackupUtility.Views
         public ObservableCollection<DataFolderItemModel> RestoreDataFolders { get; set; } = new();
 
         private string _loadedBackupFilePath = string.Empty;
+        private CancellationTokenSource? _scanCancellation;
 
         public MainWindow()
         {
@@ -29,17 +31,21 @@ namespace BackupUtility.Views
             LvBackupData.ItemsSource = BackupDataFolders;
             LvRestoreApps.ItemsSource = RestoreApps;
             LvRestoreData.ItemsSource = RestoreDataFolders;
+            Closed += (_, _) => _scanCancellation?.Cancel();
 
             Log("Chọn Export hoặc Import để bắt đầu.");
         }
 
         private void Log(string message)
         {
-            Dispatcher.Invoke(() =>
+            if (!Dispatcher.CheckAccess())
             {
-                TxtLog.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}\n");
-                TxtLog.ScrollToEnd();
-            });
+                _ = Dispatcher.BeginInvoke(new Action(() => Log(message)));
+                return;
+            }
+
+            TxtLog.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}\n");
+            TxtLog.ScrollToEnd();
         }
 
         private void LanguageSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -52,7 +58,7 @@ namespace BackupUtility.Views
 
         private void LoadDefaultDataFolders()
         {
-            var suggested = AppScannerService.GetSuggestedDataFolders();
+            var suggested = AppScannerService.GetSuggestedDataFoldersAsync().GetAwaiter().GetResult();
             BackupDataFolders.Clear();
             foreach (var item in suggested)
             {
@@ -60,7 +66,83 @@ namespace BackupUtility.Views
             }
         }
 
+        private void SetScanningState(bool isScanning, string status = "")
+        {
+            BtnScanItems.IsEnabled = !isScanning;
+            BtnChooseExport.IsEnabled = !isScanning;
+            ScanProgressPanel.Visibility = isScanning ? Visibility.Visible : Visibility.Collapsed;
+            if (isScanning)
+            {
+                ScanProgressBar.Value = 0;
+                TxtScanStatus.Text = status;
+            }
+        }
+
         private async Task ScanExportItemsAsync()
+        {
+            if (_scanCancellation is not null) return;
+
+            using var cancellation = new CancellationTokenSource();
+            _scanCancellation = cancellation;
+            SetScanningState(true, "Starting fast Registry scan...");
+
+            var progress = new Progress<ScanProgress>(update =>
+            {
+                ScanProgressBar.Value = update.Percent;
+                TxtScanStatus.Text = $"{update.Message} ({update.Percent}%)";
+                Log(update.Message);
+            });
+
+            try
+            {
+                Log("Scanning installed applications and selected data folders...");
+                var registryApps = await AppScannerService.ScanRegistryInstalledAppsAsync(cancellation.Token);
+
+                BackupApps.Clear();
+                foreach (var app in registryApps)
+                {
+                    BackupApps.Add(app);
+                }
+                Log($"Registry scan is ready: {registryApps.Count} applications found. Checking optional winget data in the background...");
+
+                var dataFoldersTask = AppScannerService.GetSuggestedDataFoldersAsync(progress, cancellation.Token);
+                var wingetAppsTask = AppScannerService.ScanWingetPackagesAsync(progress, cancellation.Token);
+                await Task.WhenAll(dataFoldersTask, wingetAppsTask);
+
+                var scannedApps = AppScannerService.PrepareApps(registryApps.Concat(await wingetAppsTask));
+                BackupApps.Clear();
+                foreach (var app in scannedApps)
+                {
+                    BackupApps.Add(app);
+                }
+
+                BackupDataFolders.Clear();
+                foreach (var folder in await dataFoldersTask)
+                {
+                    BackupDataFolders.Add(folder);
+                }
+
+                ScanProgressBar.Value = 100;
+                TxtScanStatus.Text = "Scan complete (100%)";
+                Log($"Found {scannedApps.Count} applications and {BackupDataFolders.Count} data groups. Select the items to export.");
+            }
+            catch (OperationCanceledException)
+            {
+                Log("Scan cancelled.");
+            }
+            catch (Exception ex)
+            {
+                Log($"Scan failed safely: {ex.Message}");
+                MessageBox.Show("The scan could not complete. Registry results, if available, were kept.", "Scan warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            finally
+            {
+                _scanCancellation = null;
+                SetScanningState(false);
+            }
+        }
+
+        private async Task ScanExportItemsLegacyAsync()
         {
             Log("Đang quét ứng dụng và các thư mục dữ liệu quan trọng...");
             BackupApps.Clear();
